@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2205027066581e4ea387df82c93401f, type: 3}
+  m_Name: sfx_shotgun_fire
+  m_EditorClassIdentifier: 
+  fisherYatesShuffle:
+    sequence:
+    - {fileID: 8300000, guid: 0432dd4a9304aa146a7fbb5b87f4d3af, type: 3}
+    - {fileID: 8300000, guid: 74645daf2cd6fff4c87bd48f477a7696, type: 3}
+    - {fileID: 8300000, guid: c77fc6b2f3bbcfa44a731ab353a8c631, type: 3}

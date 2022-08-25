@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2205027066581e4ea387df82c93401f, type: 3}
+  m_Name: sfx_shotgun_reload_single
+  m_EditorClassIdentifier: 
+  fisherYatesShuffle:
+    sequence:
+    - {fileID: 8300000, guid: ff12c0c4cc47d76468239d9055aa4c0c, type: 3}
+    - {fileID: 8300000, guid: 7903b35a332159443b1d1ec306d1bb2b, type: 3}
+    - {fileID: 8300000, guid: fdcab709164ae894dae3ad59267f31bf, type: 3}
+    - {fileID: 8300000, guid: 98a3b5b29c24f7648b09c02da0fa47b2, type: 3}
+    - {fileID: 8300000, guid: 95876a03ff1136141bbee5962e4b0a18, type: 3}
+    - {fileID: 8300000, guid: 9905797318c3359469a158f76a2eb205, type: 3}
+    - {fileID: 8300000, guid: dc0cdd1838f11b64cbc5337a22365958, type: 3}
+    - {fileID: 8300000, guid: 790b987703f8e8e438a86ab9082e626c, type: 3}

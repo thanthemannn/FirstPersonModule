@@ -7,6 +7,9 @@ namespace Than.Projectiles
 {
     public abstract class Projectile : MonoBehaviour
     {
+        [Min(0)] public float hitRadius = 0;
+        [Min(0)] public float maxShootDistance = Mathf.Infinity;
+
         [HideInInspector] public Gun source;
 
         public System.Action<HitData> onHit;
@@ -70,6 +73,20 @@ namespace Than.Projectiles
         void OnDisable()
         {
             StopAllCoroutines();
+        }
+
+        void OnDrawGizmos()
+        {
+            DrawProjectileGizmos(transform.position);
+        }
+
+        public void DrawProjectileGizmos(Vector3 position)
+        {
+            Gizmos.color = Color.red;
+            if (hitRadius > 0)
+                Gizmos.DrawWireSphere(position, hitRadius);
+            else
+                Gizmos.DrawSphere(position, .025f);
         }
 
         void SetupCollisionIgnores()

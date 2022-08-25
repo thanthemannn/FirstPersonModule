@@ -9904,12 +9904,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e50799e211df2b4d856ac535a94cc0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  hitRadius: 0
+  maxShootDistance: 40
   source: {fileID: 0}
   hitsBeforeDeath: 1
   deathTime: 0.7
   aliveTime: 0
   hitParticle: {fileID: 8988686101603130192}
   waitForParticlesBeforeDeath: 1
-  hitRadius: 0
-  maxShootDistance: Infinity
   lineRenderer: {fileID: 0}

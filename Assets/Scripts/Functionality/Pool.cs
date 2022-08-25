@@ -77,6 +77,20 @@ namespace Than
             return obj;
         }
 
+        // public async Task<T> LoadAsset()
+        // {
+        //     var creation = addressableReference.LoadAssetAsync();//.InstantiateAsync(parent);
+
+
+
+        //     Task<GameObject> createTask = creation.Task;
+        //     await createTask;
+
+        //     T obj = createTask.Result.GetComponent<T>();
+
+        //     return obj;
+        // }
+
         public async Task<T[]> Get(int count, bool active = true, Transform assignParent = null, System.Action<T> action = null)
         {
             T[] objs = new T[count];

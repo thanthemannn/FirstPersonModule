@@ -6,8 +6,6 @@ namespace Than.Projectiles
 {
     public class Projectile_Hitscan : Projectile
     {
-        [Min(0)] public float hitRadius = 0;
-        [Min(0)] public float maxShootDistance = Mathf.Infinity;
         const float infinity_maxVisualDistance = 100;
 
         RaycastHit[] raycastAllocation = new RaycastHit[10];

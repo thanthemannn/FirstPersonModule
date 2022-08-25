@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2205027066581e4ea387df82c93401f, type: 3}
-  m_Name: sfx_AR_Fire
+  m_Name: sfx_ar_fire
   m_EditorClassIdentifier: 
   fisherYatesShuffle:
     sequence:
