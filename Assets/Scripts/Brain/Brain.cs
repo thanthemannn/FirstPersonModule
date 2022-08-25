@@ -23,6 +23,8 @@ namespace Than.Input
         public BoolInput Reload { get; protected set; } = new BoolInput("Reload");
         public BoolInput Crouch { get; protected set; } = new BoolInput("Crouch");
 
+        public FloatInput SwitchWeapon { get; protected set; } = new FloatInput("SwitchWeapon");
+
         #endregion
 
 

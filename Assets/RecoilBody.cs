@@ -6,13 +6,13 @@ namespace Than.Projectiles
 {
     public class RecoilBody : MonoBehaviour
     {
-        Vector3 current_recoilTarget;
-        float current_snappiness;
-        float current_returnSpeed;
-
+        public Vector3 current_recoilTarget { get; private set; }
+        public float current_snappiness { get; private set; }
+        public float current_returnSpeed { get; private set; }
         private void OnDisable()
         {
             StopAllCoroutines();
+            transform.localEulerAngles = Vector3.zero;
             recoilRunning = false;
         }
 
@@ -20,15 +20,23 @@ namespace Than.Projectiles
         public class Settings
         {
             public RecoilBody recoilBody;
-            public Vector3 force = new Vector3(6, 6, .6f);
-            public float snappiness = 6;
-            public float returnSpeed = 6;
+            public float snappiness = 12;
+            public float returnSpeed = 12;
             public float aimMultiplier = 0.3333f;
             public float moveMultiplier = 1.2f;
 
-            public Settings(Vector3 force, float snappiness, float returnSpeed, float aimMultiplier, float moveMultiplier)
+
+            [Header("Random Ranges")]
+            public Vector3 forceRange_max = new Vector3(1, 1, .6f);
+            public Vector3 forceRange_min = new Vector3(-.5f, -1, -.6f);
+
+
+            public Vector3 last_randomValues { get; private set; }
+
+            public Settings(Vector3 forceRange_max, Vector3 forceRange_min, float snappiness, float returnSpeed, float aimMultiplier, float moveMultiplier)
             {
-                this.force = force;
+                this.forceRange_max = forceRange_max;
+                this.forceRange_min = forceRange_min;
                 this.snappiness = snappiness;
                 this.returnSpeed = returnSpeed;
                 this.aimMultiplier = aimMultiplier;
@@ -37,19 +45,32 @@ namespace Than.Projectiles
 
             public void ExecuteRecoil(bool isAiming, bool isMoving)
             {
-                Vector3 f = force;
-                if (isAiming)
-                    f *= aimMultiplier;
-                if (isMoving)
-                    f *= moveMultiplier;
+                Vector3 rand = new Vector3(Random.value, Random.value, Random.value);
+                ExecuteRecoil(isAiming, isMoving, rand);
+            }
 
-                recoilBody?.ExecuteRecoil(f, snappiness, returnSpeed);
+            public void ExecuteRecoil(bool isAiming, bool isMoving, Vector3 randomWeights)
+            {
+                last_randomValues = randomWeights;
+
+                Vector3 appliedForce = new Vector3(
+                    Mathf.Lerp(forceRange_min.x, forceRange_max.x, last_randomValues.x),
+                    Mathf.Lerp(forceRange_min.y, forceRange_max.y, last_randomValues.y),
+                    Mathf.Lerp(forceRange_min.z, forceRange_max.z, last_randomValues.z)
+                );
+
+                if (isAiming)
+                    appliedForce *= aimMultiplier;
+                if (isMoving)
+                    appliedForce *= moveMultiplier;
+
+                recoilBody?.ExecuteRecoil(appliedForce, snappiness, returnSpeed);
             }
         }
 
         public void ExecuteRecoil(Vector3 force, float snappiness, float returnSpeed)
         {
-            current_recoilTarget += new Vector3(-force.x, Random.Range(-force.y, force.y), Random.Range(-force.z, force.z));
+            current_recoilTarget += force;
             current_snappiness = snappiness;
             current_returnSpeed = returnSpeed;
 

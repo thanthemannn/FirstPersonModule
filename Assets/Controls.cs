@@ -98,6 +98,15 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SwitchWeapon"",
+                    ""type"": ""Value"",
+                    ""id"": ""805d0b35-e11e-44c5-9a8b-ccd73bae9e16"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -305,7 +314,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                     ""path"": ""<Keyboard>/r"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Keyboard and Mouse"",
                     ""action"": ""Reload"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -313,13 +322,57 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""6c45d9be-92b7-404b-b3d7-48a20026c6e8"",
-                    ""path"": ""<Gamepad>/rightShoulder"",
+                    ""path"": ""<Gamepad>/buttonEast"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Standard Gamepad"",
                     ""action"": ""Reload"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7088b105-2f7f-46fc-b04b-d572b762b441"",
+                    ""path"": ""<Mouse>/scroll/y"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard and Mouse"",
+                    ""action"": ""SwitchWeapon"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""Shoulder Buttons"",
+                    ""id"": ""ca7b0fdf-771f-40d7-a2a2-b71744464e88"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SwitchWeapon"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""644ae12e-3719-4aab-8092-9109cd0e8e20"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Standard Gamepad"",
+                    ""action"": ""SwitchWeapon"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""631353f2-48f1-42c4-92cf-a2411fba3067"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Standard Gamepad"",
+                    ""action"": ""SwitchWeapon"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
                 }
             ]
         }
@@ -364,6 +417,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
         m_FirstPerson_Sprint = m_FirstPerson.FindAction("Sprint", throwIfNotFound: true);
         m_FirstPerson_Crouch = m_FirstPerson.FindAction("Crouch", throwIfNotFound: true);
         m_FirstPerson_Reload = m_FirstPerson.FindAction("Reload", throwIfNotFound: true);
+        m_FirstPerson_SwitchWeapon = m_FirstPerson.FindAction("SwitchWeapon", throwIfNotFound: true);
     }
 
     public void Dispose()
@@ -431,6 +485,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
     private readonly InputAction m_FirstPerson_Sprint;
     private readonly InputAction m_FirstPerson_Crouch;
     private readonly InputAction m_FirstPerson_Reload;
+    private readonly InputAction m_FirstPerson_SwitchWeapon;
     public struct FirstPersonActions
     {
         private @Controls m_Wrapper;
@@ -443,6 +498,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
         public InputAction @Sprint => m_Wrapper.m_FirstPerson_Sprint;
         public InputAction @Crouch => m_Wrapper.m_FirstPerson_Crouch;
         public InputAction @Reload => m_Wrapper.m_FirstPerson_Reload;
+        public InputAction @SwitchWeapon => m_Wrapper.m_FirstPerson_SwitchWeapon;
         public InputActionMap Get() { return m_Wrapper.m_FirstPerson; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -476,6 +532,9 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                 @Reload.started -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnReload;
                 @Reload.performed -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnReload;
                 @Reload.canceled -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnReload;
+                @SwitchWeapon.started -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnSwitchWeapon;
+                @SwitchWeapon.performed -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnSwitchWeapon;
+                @SwitchWeapon.canceled -= m_Wrapper.m_FirstPersonActionsCallbackInterface.OnSwitchWeapon;
             }
             m_Wrapper.m_FirstPersonActionsCallbackInterface = instance;
             if (instance != null)
@@ -504,6 +563,9 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                 @Reload.started += instance.OnReload;
                 @Reload.performed += instance.OnReload;
                 @Reload.canceled += instance.OnReload;
+                @SwitchWeapon.started += instance.OnSwitchWeapon;
+                @SwitchWeapon.performed += instance.OnSwitchWeapon;
+                @SwitchWeapon.canceled += instance.OnSwitchWeapon;
             }
         }
     }
@@ -536,5 +598,6 @@ public partial class @Controls : IInputActionCollection2, IDisposable
         void OnSprint(InputAction.CallbackContext context);
         void OnCrouch(InputAction.CallbackContext context);
         void OnReload(InputAction.CallbackContext context);
+        void OnSwitchWeapon(InputAction.CallbackContext context);
     }
 }

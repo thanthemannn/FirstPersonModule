@@ -77,33 +77,46 @@ namespace Than
             return obj;
         }
 
-        public async Task<T> Get(bool active = true, Transform assignParent = null, System.Action<T> action = null)
+        public async Task<T[]> Get(int count, bool active = true, Transform assignParent = null, System.Action<T> action = null)
         {
-            T obj;
-            if (inactivePooled.Count > 0)
+            T[] objs = new T[count];
+
+            for (int i = 0; i < count; i++)
             {
-                obj = inactivePooled.Pop();
-            }
-            else if (allowInstantiationBeyondPrewarm)
-            {
-                var task = CreatePooledItem(assignParent);
-                await task;
-                obj = task.Result;
-            }
-            else
-            {
-                return null;
+                if (inactivePooled.Count > 0)
+                {
+                    objs[i] = inactivePooled.Pop();
+                }
+                else if (allowInstantiationBeyondPrewarm)
+                {
+                    var task = CreatePooledItem(assignParent);
+                    await task;
+                    objs[i] = task.Result;
+                }
+                else
+                {
+                    break;
+                }
+
+                objs[i].gameObject.SetActive(active);
             }
 
-            obj.gameObject.SetActive(active);
+            activeObjects.AddRange(objs);
 
-            activeObjects.Add(obj);
             if (action != null)
             {
-                action?.Invoke(obj);
+                for (int i = 0; i < count; i++)
+                    action.Invoke(objs[i]);
             }
 
-            return obj;
+            return objs;
+        }
+
+        public async Task<T> Get(bool active = true, Transform assignParent = null, System.Action<T> action = null)
+        {
+            var task = Get(1, active, assignParent, action);
+            await task;
+            return task.Result[0];
         }
     }
 }
