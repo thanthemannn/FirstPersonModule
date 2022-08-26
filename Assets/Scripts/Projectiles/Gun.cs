@@ -22,11 +22,14 @@ namespace Than.Projectiles
 
 
 
-        public float Current_ProjectileSpread => Calculate_ProjectileSpreadAtTime(current_shootTime);
-        public float Calculate_ProjectileSpreadAtTime(float time) => Mathf.Min(base_projectileSpread + bloom_projectileSpreadIncreaseOverTime * time, bloom_max_projectileSpreadIncreaseOverTime);
+        public float Current_ProjectileSpread => Calculate_ProjectileSpreadAtTime(current_bloomTime);
+        public float Calculate_ProjectileSpreadAtTime(float time) => base_projectileSpread + bloom_projectileSpreadIncreaseOverTime * Mathf.Min(time, ProjectileSpread_TimeToMaxSpread);//Mathf.Min(base_projectileSpread + bloom_projectileSpreadIncreaseOverTime * time, bloom_max_projectileSpreadIncreaseOverTime);
         [Min(0)] public float base_projectileSpread = 0;
         [Min(0)] public float bloom_projectileSpreadIncreaseOverTime = 0;
+        [Min(0)] public float bloom_returnSpeed = 1;
         [Min(0)] public float bloom_max_projectileSpreadIncreaseOverTime = .1f;
+
+        float ProjectileSpread_TimeToMaxSpread => bloom_max_projectileSpreadIncreaseOverTime / bloom_projectileSpreadIncreaseOverTime;
 
         [Min(1)] public int projectilesPerShot = 1;
         public int ammoPerClip = -1;
@@ -52,17 +55,22 @@ namespace Than.Projectiles
         public float cooldown = 0.5f;
         public bool holdForAutomatic = true;
 
-        public bool isAlert => current_shootTime > 0;
-        public float current_shootTime { get; private set; } = 0;
-        public bool isReloading { get; private set; } = false;
+        public bool isAlert => current_alertLevel > 0;
+        public float current_alertLevel { get; private set; } = 0;
+        public float returnSpeed_alertLevel = 5;
+
+        float lastShotTime = Mathf.NegativeInfinity;
+        public bool isShooting => Time.time < lastShotTime + cooldown;
+        public float current_bloomTime { get; private set; } = 0;
+        public bool isReloading => current_reloadTimeLeft > 0;
         public System.Action onShoot;
         public UnityEvent onShootEvent;
 
         public float shooting_moveSpeedLimit = 6;
 
         public bool autoReloadWhenShootingEmpty = true;
-        public float reloadTime = 1;
-        public float canCancelReloadByShootingBeforeTime = .5f;
+        public float reloadTime { get; private set; } = 1;
+        public int reloadAmountPerLoop = -1;
         public float reload_moveSpeedLimit = 6;
 
         [Header("Aim")]
@@ -112,46 +120,6 @@ namespace Than.Projectiles
         IEnumerator reloadCoroutine;
 
 
-        List<Animator> animators = new List<Animator>();
-        int animators_len;
-
-        public void SubscribeAnimator(Animator animator)
-        {
-            if (!animators.Contains(animator))
-                animators.Add(animator);
-
-            animators_len = animators.Count;
-
-            SetupAnimatorParameters(animator);
-        }
-
-        public void UnsubscribeAnimator(Animator animator)
-        {
-            animators.Remove(animator);
-            animators_len = animators.Count;
-        }
-
-        public void UpdateAnimationParameters(Animator animator)
-        {
-            animator.SetBool(ANIM_HASH_ALERT, isAlert);
-            animator.SetBool(ANIM_HASH_AIMING, isAiming);
-            animator.SetBool(ANIM_HASH_SPRINTING, isSprinting);
-            animator.SetBool(ANIM_HASH_FULL_AMMO, FullAmmo);
-        }
-
-        public void SetupAnimatorParameters(Animator animator)
-        {
-            animator.SetFloat(ANIM_HASH_ZOOM_MULTIPLIER, 1f / aim_zoomTime);
-            animator.SetFloat(ANIM_HASH_ZOOM_RESET_MULTIPLIER, 1f / aim_zoomResetTime);
-            animator.SetFloat(ANIM_HASH_RELOAD_MULTIPLIER, 1f / reloadTime);
-            animator.SetFloat(ANIM_HASH_SPRINT_TRANSITION_MULTIPLIER, 1f / sprintTransitionTime);
-            animator.SetFloat(ANIM_HASH_EQUIP_MULTIPLIER, 1f / equipTime);
-            animator.SetFloat(ANIM_HASH_UNEQUIP_MULTIPLIER, 1f / unequipTime);
-        }
-
-
-
-
         int prev_projectilesPerShot;
         bool awakeRun = false;
         async void Awake()
@@ -161,14 +129,16 @@ namespace Than.Projectiles
 
             //shootCoroutine = ShootInputCoroutine();
 
+            ReadReloadAnimation();
+
             currentClipAmmo = ammoPerClip;
 
             physicsBody = GetComponentInParent<PhysicsBody>();
             cameraZoom = GetComponentInParent<CameraZoom>();
 
             //*Subscribe the gun to our animator system
-            Animator gunAnim = GetComponentInChildren<Animator>();
-            if (gunAnim) SubscribeAnimator(gunAnim);
+            //Animator gunAnim = GetComponentInChildren<Animator>();
+            //if (gunAnim) SubscribeAnimator(gunAnim);
 
 
             var sample = projectiles.Get(false);
@@ -249,29 +219,27 @@ namespace Than.Projectiles
 
         public void OnEnable()
         {
+            equipPercent = 0;
             Equip();
         }
 
         public void OnDisable()
         {
-            isReloading = false;
+            lastShotTime = Mathf.NegativeInfinity;
+            equipPercent = 0;
+            current_bloomTime = 0;
+            current_alertLevel = 0;
+            current_reloadTimeLeft = 0;
             current_cooldown = 0;
             StopAllCoroutines();
-            current_shootTime = 0;
+            // isShooting = false;
             inEquipTransition = false;
-            //brain.Shoot.onPress -= ShootInput;
-
-            for (int i = 0; i < animators_len; i++)
-            {
-                animators[i].ResetTrigger(ANIM_HASH_RELOAD_END);
-                animators[i].ResetTrigger(ANIM_HASH_RELOAD);
-                animators[i].ResetTrigger(ANIM_HASH_EQUIP);
-                animators[i].ResetTrigger(ANIM_HASH_UNEQUIP);
-            }
         }
 
         public void Equip(bool equipActive = true)
         {
+            current_reloadTimeLeft = 0;
+
             if (!gameObject.activeSelf)
             {
                 if (equipActive)
@@ -286,28 +254,25 @@ namespace Than.Projectiles
             int trigger = equipActive ? ANIM_HASH_EQUIP : ANIM_HASH_UNEQUIP;
             int resetTrigger = equipActive ? ANIM_HASH_UNEQUIP : ANIM_HASH_EQUIP;
 
-            for (int i = 0; i < animators_len; i++)
-            {
-                animators[i].SetTrigger(trigger);
-                animators[i].ResetTrigger(resetTrigger);
-            }
-
             equipCoroutine = EquipCoroutine(equipActive);
             StartCoroutine(equipCoroutine);
         }
 
+        public float equipPercent { get; private set; }
         public bool inEquipTransition { get; private set; } = false;
         IEnumerator equipCoroutine;
         IEnumerator EquipCoroutine(bool equipActive)
         {
             inEquipTransition = true;
 
-            float endTime = equipActive ? equipTime : unequipTime;
-            for (float t = 0; t < endTime; t += Time.deltaTime)
+            float speed = 1 / (equipActive ? equipTime : -unequipTime);
+            float goal = equipActive.ToInt();
+            for (equipPercent = 1 - goal; equipPercent < goal; equipPercent += Time.deltaTime * speed)
                 yield return null;
+            equipPercent = goal;
 
-            for (int i = 0; i < animators_len; i++)
-                SetupAnimatorParameters(animators[i]);
+            //for (int i = 0; i < animators_len; i++)
+            //    SetupAnimatorParameters(animators[i]);
 
             inEquipTransition = false;
 
@@ -320,88 +285,140 @@ namespace Than.Projectiles
             if (!CanReload)
                 return;
 
-            isReloading = true;
             reloadCoroutine = ReloadCoroutine();
             StartCoroutine(reloadCoroutine);
         }
 
-        public void Reload_RestartTime()
-        {
-            if (FullAmmo)
-                return;
-
-            current_reloadTime = 0;
-            onReloadLoop?.Invoke();
-        }
-
         public void Reload_AddAmmo(int ammo)
         {
+            if (ammo < 0)
+                ammo = ammoPerClip;
+
             current_chargeup = 0;
             current_heldShotsFired = 0;
             currentClipAmmo = Mathf.Min(ammoPerClip, currentClipAmmo + ammo);
-
-            if (FullAmmo)
-                isReloading = false;
-        }
-
-        public void Reload_Finish()
-        {
-            current_chargeup = 0;
-            current_heldShotsFired = 0;
-            currentClipAmmo = ammoPerClip;
-            isReloading = false;
         }
 
         public void CancelReload()
         {
             current_chargeup = 0;
             current_heldShotsFired = 0;
-            current_reloadTime = 0;
+            current_reloadTimeLeft = 0;
 
             if (reloadCoroutine != null)
                 StopCoroutine(reloadCoroutine);
-            isReloading = false;
-
-            // for (int i = 0; i < animators_len; i++)
-            // {
-            //     animators[i].SetTrigger(ANIM_HASH_RELOAD_CANCEL);
-            //     animators[i].ResetTrigger(ANIM_HASH_RELOAD);
-            // }
         }
 
-        float current_reloadTime;
-        bool inReloadAnimation => isReloading || current_reloadTime > 0;
+        public AnimationClip reloadAnimation;
+
+
+
+        void ReadReloadAnimation()
+        {
+            reloadTime = reloadAnimation.length;
+            reloadAnimation_loopEnd = reloadTime;
+            reloadAnimation_loadAmmoAtTime = reloadTime;
+            reloadAnimation_pointOfNoReturn = reloadTime;
+            reloadAnimation_finishingFlourish = reloadTime;
+
+            var events = reloadAnimation.events;
+            foreach (var e in events)
+            {
+                float eventTime = e.time;
+                switch (e.functionName)
+                {
+                    case "Anim_Reload_StartLoopPoint":
+                        reloadAnimation_loopStart = eventTime;
+                        break;
+
+                    case "Anim_Reload_EndLoopPoint":
+                        reloadAnimation_loopEnd = eventTime;
+                        break;
+
+                    case "Anim_Reload_LoadAmmo":
+                        reloadAnimation_loadAmmoAtTime = eventTime;
+                        break;
+
+                    case "Anim_Reload_PointOfNoReturn":
+                        reloadAnimation_pointOfNoReturn = eventTime;
+                        break;
+
+                    case "Anim_Reload_FinishingFlourish":
+                        reloadAnimation_finishingFlourish = eventTime;
+                        break;
+                }
+            }
+        }
+
+        float reloadAnimation_loopStart;
+        float reloadAnimation_loopEnd;
+        float reloadAnimation_loadAmmoAtTime;
+        float reloadAnimation_pointOfNoReturn;
+        float reloadAnimation_finishingFlourish;
+
+        Vector2 reloadLoop = Vector2.zero;
+
+        //float current_reloadTime;
+        public float current_reloadPercentComplete => current_reloadTime / reloadTime;
+
+        public float current_reloadTimeLeft { get; private set; } = 0;
+        public float current_reloadTime => reloadTime - current_reloadTimeLeft;
+        //bool inReloadAnimation => isReloading || current_reloadTime > 0;
         IEnumerator ReloadCoroutine()
         {
-            isReloading = true;
             CancelAim();
             onReloadStart?.Invoke();
-            //gunAudio.PlayOneShot(sfx_reload);
 
-            for (int i = 0; i < animators_len; i++)
+            current_reloadTimeLeft = reloadTime;
+        ReloadLoop:
+            bool hasReloadedThisLoop = false;
+            bool loopStarted = false;
+            bool loopFinished = false;
+            for (; current_reloadTimeLeft > 0; current_reloadTimeLeft -= Time.deltaTime)
             {
-                animators[i].ResetTrigger(ANIM_HASH_RELOAD_END);
-                animators[i].SetTrigger(ANIM_HASH_RELOAD);
-            }
+                float time = reloadTime - current_reloadTimeLeft;
 
-            Reload_RestartTime();
-            for (; current_reloadTime < reloadTime + Time.deltaTime || !FullAmmo; current_reloadTime += Time.deltaTime)
-            {
+                if (!loopStarted && time >= reloadAnimation_loopStart)
+                {
+                    onReloadLoop?.Invoke();
+                    loopStarted = true;
+                }
+
+                if (!hasReloadedThisLoop && time >= reloadAnimation_loadAmmoAtTime)
+                {
+                    Reload_AddAmmo(reloadAmountPerLoop);
+                    hasReloadedThisLoop = true;
+                }
+
+                if (time >= reloadAnimation_loopEnd)
+                {
+                    if (!FullAmmo)
+                    {
+                        current_reloadTimeLeft = reloadTime - reloadAnimation_loopStart;
+                        goto ReloadLoop;
+                    }
+                    else if (!loopFinished)
+                    {
+                        onReloadEnd?.Invoke();
+                        loopFinished = true;
+                    }
+                }
+
                 yield return null;
             }
 
-            for (int i = 0; i < animators_len; i++)
-                animators[i].SetTrigger(ANIM_HASH_RELOAD_END);
+            if (!hasReloadedThisLoop)
+                Reload_AddAmmo(reloadAmountPerLoop);
 
-            if (isReloading) //* Only top up our clip if the animator hasn't already done so
-                Reload_Finish();
+            if (!FullAmmo)
+            {
+                current_reloadTimeLeft = reloadTime - reloadAnimation_loopStart;
+                goto ReloadLoop;
+            }
+
+            current_reloadTimeLeft = 0;
 
             yield return null;
-            for (int i = 0; i < animators_len; i++)
-                animators[i].ResetTrigger(ANIM_HASH_RELOAD_END);
-
-            onReloadEnd?.Invoke();
-            current_reloadTime = 0;
         }
 
         bool CanAim => !inEquipTransition && !isReloading && HasAim;
@@ -417,14 +434,21 @@ namespace Than.Projectiles
         float sprintToFire_cooldown = 0;
         bool inCooldown => current_cooldown > 0;
 
-        bool isSprinting;
+        public bool isSprinting { get; private set; }
         void Update()
         {
             MoveLimitUpdate();
 
+            AlertLevelUpdate();
+
+            if (isShooting)
+                current_bloomTime = Mathf.Min(current_bloomTime + Time.deltaTime, ProjectileSpread_TimeToMaxSpread);
+            else
+                current_bloomTime = Mathf.Max(0, current_bloomTime - Time.deltaTime * bloom_returnSpeed);
+
             isSprinting = physicsBody.lastManualMovement.magnitude > sprintThreshold;
-            for (int i = 0; i < animators_len; i++)
-                UpdateAnimationParameters(animators[i]);
+            // for (int i = 0; i < animators_len; i++)
+            //     UpdateAnimationParameters(animators[i]);
 
             if (isSprinting)
                 sprintToFire_cooldown = sprintTransitionTime;
@@ -439,6 +463,17 @@ namespace Than.Projectiles
 
             AimUpdate();
             ShootUpdate();
+        }
+
+        void AlertLevelUpdate()
+        {
+            if (isShooting)
+                current_alertLevel = 1;
+            else
+                current_alertLevel -= returnSpeed_alertLevel * Time.deltaTime;
+
+            current_alertLevel = Mathf.Clamp01(current_alertLevel);
+
         }
 
         void AimUpdate()
@@ -463,36 +498,37 @@ namespace Than.Projectiles
             {
                 current_chargeup = 0;
                 current_heldShotsFired = 0;
-                current_shootTime = 0;
+                //isShooting = false;
                 return;
             }
 
             //*Ensure that non-automatic weapons don't fire beyond the first held shot
             if (!holdForAutomatic && current_heldShotsFired > 0)
             {
-                current_shootTime = 0;
+                //isShooting = false;
                 return;
             }
 
 
-            if (inReloadAnimation)
+            if (isReloading)
             {
-                bool canCancelReload = brain.Shoot.pressedThisFrame && HasAmmo && current_heldShotsFired == 0 && current_reloadTime < canCancelReloadByShootingBeforeTime;
-                if (canCancelReload)
+                bool outsideMainReloadAnimation = current_reloadTime < reloadAnimation_pointOfNoReturn || current_reloadTime > reloadAnimation_finishingFlourish;
+                bool canShoot = brain.Shoot.pressedThisFrame && HasAmmo && current_heldShotsFired == 0;
+                if (canShoot && outsideMainReloadAnimation)
                     CancelReload();
                 else
                 {
-                    current_shootTime = 0;
+                    //isShooting = false;
                     return;
                 }
             }
 
-            current_shootTime += Time.deltaTime;
+            //isShooting = true;
 
             if (inCooldown)
             {
-                if (!holdForAutomatic)
-                    current_shootTime = 0;
+                //     if (!holdForAutomatic)
+                //         isShooting = false;
 
                 return;
             }
@@ -520,7 +556,7 @@ namespace Than.Projectiles
 
             if (p == null || p[0] == null)
             {
-                current_shootTime = 0;
+                //isShooting = false;
                 return;
             }
 
@@ -532,11 +568,11 @@ namespace Than.Projectiles
         void MoveLimitUpdate()
         {
             float limit = Mathf.Infinity;
-            if (isAlert)
+            if (isShooting)
                 limit = shooting_moveSpeedLimit;
             if (isAiming)
                 limit = Mathf.Min(limit, aiming_moveSpeedLimit);
-            if (current_reloadTime > 0)
+            if (isReloading)
                 limit = Mathf.Min(limit, reload_moveSpeedLimit);
 
             if (limit < Mathf.Infinity)
@@ -549,7 +585,7 @@ namespace Than.Projectiles
         public void OutOfAmmo()
         {
             current_chargeup = 0;
-            current_shootTime = 0;
+            //isShooting = false;
 
             if (autoReloadWhenShootingEmpty && brain.Shoot.pressedThisFrame)
                 Reload();
@@ -602,6 +638,7 @@ namespace Than.Projectiles
             }
 
             current_heldShotsFired++;
+            lastShotTime = Time.time;
 
             bool moving = IsMovingBeyondRecoilThreshold;
             aimRecoil.ExecuteRecoil(isAiming, moving);
@@ -610,8 +647,8 @@ namespace Than.Projectiles
             onShoot?.Invoke();
             onShootEvent?.Invoke();
 
-            for (int i = 0; i < animators_len; i++)
-                animators[i].SetTrigger(ANIM_HASH_SHOOT);
+            // for (int i = 0; i < animators_len; i++)
+            //     animators[i].SetTrigger(ANIM_HASH_SHOOT);
 
             if (currentClipAmmo > 0)
                 currentClipAmmo--;
@@ -656,7 +693,7 @@ namespace Than.Projectiles
             Gizmos.DrawLine(transform.position, transform.position + transform.forward * maxDist);
 
             float potentialShootTimeMax = (ammoPerClip >= 0 ? ammoPerClip : 1000) * (chargeup + cooldown);
-            float maxBloomCalculation = Mathf.Min(bloom_max_projectileSpreadIncreaseOverTime, potentialShootTimeMax * bloom_projectileSpreadIncreaseOverTime) + base_projectileSpread;
+            float maxBloomCalculation = Calculate_ProjectileSpreadAtTime(potentialShootTimeMax);//Mathf.Min(bloom_max_projectileSpreadIncreaseOverTime, potentialShootTimeMax * bloom_projectileSpreadIncreaseOverTime) + base_projectileSpread;
 
             for (float t = 1; t < maxDist; t += gizmosPreview_shotDistanceTestDelta)
                 DrawShotGizmosAtTime(t, maxBloomCalculation);
@@ -714,8 +751,10 @@ namespace Than.Projectiles
             if (!awakeRun)
                 return;
 
-            for (int i = 0; i < animators_len; i++)
-                SetupAnimatorParameters(animators[i]);
+            ReadReloadAnimation();
+
+            // for (int i = 0; i < animators_len; i++)
+            //     SetupAnimatorParameters(animators[i]);
 
             if (prev_projectilesPerShot != projectilesPerShot)
                 ResizeNextProjectiles();
