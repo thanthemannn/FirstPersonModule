@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2205027066581e4ea387df82c93401f, type: 3}
+  m_Name: sfx_magnum_fire
+  m_EditorClassIdentifier: 
+  fisherYatesShuffle:
+    sequence:
+    - {fileID: 8300000, guid: b4e18875b10b6644eacfbab7d92f19bc, type: 3}
+    - {fileID: 8300000, guid: f4855cd10988a9144889c1d1bf97649c, type: 3}
+    - {fileID: 8300000, guid: 61e32a4c470ec154a804331e22c0a0c0, type: 3}
+    - {fileID: 8300000, guid: 7edd76c17cd23a34b93f71b4cf309f68, type: 3}

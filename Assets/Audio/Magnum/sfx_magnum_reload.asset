@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2205027066581e4ea387df82c93401f, type: 3}
+  m_Name: sfx_magnum_reload
+  m_EditorClassIdentifier: 
+  fisherYatesShuffle:
+    sequence:
+    - {fileID: 8300000, guid: a233442da1d454e4887506ed1e5832e9, type: 3}
+    - {fileID: 8300000, guid: 754aac81f1d4d0843b7fc20e09fe8938, type: 3}
+    - {fileID: 8300000, guid: ae01ab74e4fd1ae48b798e29ee56f239, type: 3}

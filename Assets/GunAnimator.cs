@@ -1,10 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 
 namespace Than.Projectiles
 {
+    [DefaultExecutionOrder(1)]
     [RequireComponent(typeof(Animator))]
     [RequireComponent(typeof(Gun))]
     public class GunAnimator : MonoBehaviour
@@ -68,6 +67,11 @@ namespace Than.Projectiles
             }
         }
 #endif
+
+        void OnEnable()
+        {
+            UpdateValues();
+        }
 
         void Update()
         {

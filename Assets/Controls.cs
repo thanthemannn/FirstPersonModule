@@ -335,7 +335,7 @@ public partial class @Controls : IInputActionCollection2, IDisposable
                     ""id"": ""7088b105-2f7f-46fc-b04b-d572b762b441"",
                     ""path"": ""<Mouse>/scroll/y"",
                     ""interactions"": """",
-                    ""processors"": """",
+                    ""processors"": ""Invert"",
                     ""groups"": ""Keyboard and Mouse"",
                     ""action"": ""SwitchWeapon"",
                     ""isComposite"": false,

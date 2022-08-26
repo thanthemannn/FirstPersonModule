@@ -43,6 +43,9 @@ namespace Than.Projectiles
 
         private void SwitchToWeaponInput()
         {
+            if (!guns[current_gunIndex].isActionCancellable)
+                return;
+
             int dir = UMath.GetSignIfValue(Mathf.RoundToInt(brain.SwitchWeapon.value));
 
             next_gunIndex = UMath.Mod(current_gunIndex + dir, guns.Count);

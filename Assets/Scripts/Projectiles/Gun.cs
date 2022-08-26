@@ -265,11 +265,23 @@ namespace Than.Projectiles
         {
             inEquipTransition = true;
 
-            float speed = 1 / (equipActive ? equipTime : -unequipTime);
-            float goal = equipActive.ToInt();
-            for (equipPercent = 1 - goal; equipPercent < goal; equipPercent += Time.deltaTime * speed)
-                yield return null;
-            equipPercent = goal;
+
+            if (equipActive)
+            {
+                float speed = 1 / equipTime;
+                for (equipPercent = 0; equipPercent < 1; equipPercent += Time.deltaTime * speed)
+                    yield return null;
+
+                equipPercent = 1;
+            }
+            else
+            {
+                float speed = 1 / unequipTime;
+                for (equipPercent = 1; equipPercent > 0; equipPercent -= Time.deltaTime * speed)
+                    yield return null;
+
+                equipPercent = 0;
+            }
 
             //for (int i = 0; i < animators_len; i++)
             //    SetupAnimatorParameters(animators[i]);
@@ -490,6 +502,21 @@ namespace Than.Projectiles
                 CancelAim();
         }
 
+        public bool isActionCancellable
+        {
+            get
+            {
+                if (isReloading)
+                {
+                    bool outsideMainReloadAnimation = current_reloadTime < reloadAnimation_pointOfNoReturn || current_reloadTime > reloadAnimation_finishingFlourish;
+                    return outsideMainReloadAnimation;
+                }
+
+                return true;
+            }
+
+        }
+
         float current_chargeup = 0;
         int current_heldShotsFired = 0;
         void ShootUpdate()
@@ -512,9 +539,8 @@ namespace Than.Projectiles
 
             if (isReloading)
             {
-                bool outsideMainReloadAnimation = current_reloadTime < reloadAnimation_pointOfNoReturn || current_reloadTime > reloadAnimation_finishingFlourish;
                 bool canShoot = brain.Shoot.pressedThisFrame && HasAmmo && current_heldShotsFired == 0;
-                if (canShoot && outsideMainReloadAnimation)
+                if (canShoot && isActionCancellable)
                     CancelReload();
                 else
                 {
