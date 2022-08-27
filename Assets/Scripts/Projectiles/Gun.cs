@@ -10,6 +10,8 @@ namespace Than.Projectiles
 {
     public class Gun : MonoBehaviour
     {
+
+        public Transform projectile_gunOffsetTransform;
         public AudioSource gunAudio;
         // public AudioClipGroup sfx_shoot;
         // public AudioClipGroup sfx_reload;
@@ -200,7 +202,7 @@ namespace Than.Projectiles
             if (aliveTime == Mathf.Infinity) //* No point estimating aliveTime if it's infinite
                 aliveTime = 0;
 
-            float bulletMaxLifeTime = p.aliveTime * p.hitsBeforeDeath + p.deathTime;
+            float bulletMaxLifeTime = p.aliveTime * (p.reflects + 1) + p.deathTime;
 
             if (p.hitParticle)
             {
@@ -642,6 +644,10 @@ namespace Than.Projectiles
             Vector3 forward = transform.forward;
             Quaternion forwardRotation = Quaternion.LookRotation(forward, transform.up);
 
+            Vector3 barrelStartPosition = projectile_gunOffsetTransform.position;
+            Vector3 local = transform.InverseTransformPoint(barrelStartPosition);
+            Vector3 aimStartPosition = transform.position + forward * local.z;
+
             float currentSpread = Current_ProjectileSpread;
             float radianOffset = Random.value;
             int projectilesLength = projectiles.Length;
@@ -660,7 +666,7 @@ namespace Than.Projectiles
                 Vector3 dir = forward + GetSpreadPoint(i, projectilesLength, currentSpread, radianOffset, forwardRotation);
 
                 projectiles[i].gameObject.SetActive(true);
-                projectiles[i].Shoot(dir.normalized);
+                projectiles[i].Shoot(aimStartPosition, barrelStartPosition, dir.normalized);
             }
 
             current_heldShotsFired++;
@@ -712,8 +718,6 @@ namespace Than.Projectiles
             }
 
             float maxDist = sampleProjectile.maxShootDistance;
-            if (maxDist == Mathf.Infinity)
-                maxDist = 100;
 
             Gizmos.color = Color.blue;
             Gizmos.DrawLine(transform.position, transform.position + transform.forward * maxDist);

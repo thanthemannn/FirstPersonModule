@@ -8,8 +8,8 @@ namespace Than.Projectiles
     public abstract class Projectile : MonoBehaviour
     {
         [Min(0)] public float hitRadius = 0;
-        [Min(0)] public float maxShootDistance = Mathf.Infinity;
-
+        [Range(0, PROJECTILE_MAX_DISTANCE)] public float maxShootDistance = 1000;
+        public const float PROJECTILE_MAX_DISTANCE = 1000;
         [HideInInspector] public Gun source;
 
         public System.Action<HitData> onHit;
@@ -17,18 +17,21 @@ namespace Than.Projectiles
         protected Collider[] colliders;
         int collidersLen = 0;
         bool collidersSetup = false;
-        [Min(1)] public int hitsBeforeDeath = 1;
+        [Min(0)] public int reflects = 0;
+        public int current_reflects { get; private set; } = 0;
 
         public float deathTime = 0;
 
-        public Vector3 current_shotStartPoint { get; private set; }
-        public Vector3 current_shotDirection { get; private set; }
-        public List<HitData> currentHits { get; private set; } = new List<HitData>();
+        public Vector3 current_stepPoint { get; protected set; }
+        public Vector3 current_direction { get; protected set; }
+        public List<HitData> allHits { get; private set; } = new List<HitData>();
 
-        public Vector3 InitialShotStartPoint => currentHits.Count > 0 ? currentHits[0].shotStartPoint : current_shotStartPoint;
-        public Vector3 InitialShotDirection => currentHits.Count > 0 ? currentHits[0].shotDirection : current_shotDirection;
+        public Vector3 InitialShotStartPoint => allHits.Count > 0 ? allHits[0].shotStartPoint : current_stepPoint;
+        public Vector3 InitialShotDirection => allHits.Count > 0 ? allHits[0].shotDirection : current_direction;
 
         public float aliveTime = Mathf.Infinity;
+
+        public const int HITBOX_LAYERMASK = 1 << 7;
 
         WaitForSeconds wait_aliveTime;
 
@@ -37,6 +40,14 @@ namespace Than.Projectiles
 
         public bool waitForParticlesBeforeDeath = true;
         bool hasInit = false;
+
+        public LayerMask layerMask { get; private set; }
+        public LayerMask canPenetrateLayers = HITBOX_LAYERMASK;
+
+        RaycastHit[] cached_raycastAllocations;
+        public HitData[] cached_hitData { get; private set; }
+        int base_raycastSafetyAmount = 2;
+        public int penetrateTargetCount = 0;
 
         void Start()
         {
@@ -51,9 +62,47 @@ namespace Than.Projectiles
             hasInit = true;
 
             hasHitParticle = hitParticle;
+            layerMask = gameObject.layer.GetLayerMaskFromCollisionMatrix();
+            int castSize = base_raycastSafetyAmount + penetrateTargetCount;
+            cached_raycastAllocations = new RaycastHit[castSize];
+            cached_hitData = new HitData[castSize];
 
             if (aliveTime < Mathf.Infinity)
                 wait_aliveTime = new WaitForSeconds(aliveTime);
+        }
+
+        public int Hitscan(Vector3 position, Vector3 direction, float distance)
+        {
+            int hits;
+            if (hitRadius > 0)
+                hits = Physics.RaycastNonAlloc(position, direction, cached_raycastAllocations, distance, layerMask);
+            else
+                hits = Physics.SphereCastNonAlloc(position, hitRadius, direction, cached_raycastAllocations, distance, layerMask);
+
+            int validatedHits = 0;
+            for (int i = 0; i < hits; i++)
+            {
+                HitData hitData = new HitData(this, cached_raycastAllocations[i]);
+                if (CanHit(hitData))
+                {
+                    cached_hitData[validatedHits] = hitData;
+                    validatedHits++;
+
+                    Hit(hitData);
+
+                    if (!CanPenetrate(validatedHits, hitData))
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return validatedHits;
+        }
+
+        bool CanPenetrate(int currentHits, HitData hitData)
+        {
+            return penetrateTargetCount >= currentHits && ((1 << hitData.collider.gameObject.layer) & canPenetrateLayers) != 0;
         }
 
         float startTime = 0;
@@ -62,10 +111,11 @@ namespace Than.Projectiles
             startTime = Time.time;
             StopAllCoroutines();
             this.source = source;
-            transform.position = source.transform.position;
+            transform.position = source.projectile_gunOffsetTransform.position;
             transform.rotation = source.transform.rotation;
-
-            currentHits.Clear();
+            current_reflects = 0;
+            dead = false;
+            allHits.Clear();
 
             SetupCollisionIgnores();
         }
@@ -108,13 +158,12 @@ namespace Than.Projectiles
             }
         }
 
-        public void Shoot(Vector3 direction) => Shoot(transform.position, direction);
-        public void Shoot(Vector3 position, Vector3 direction)
+        protected abstract Vector3 GetShotStartPosition(Vector3 aimPosition, Vector3 barrelPosition);
+
+        public void Shoot(Vector3 aimPosition, Vector3 barrelPosition, Vector3 direction)
         {
-            transform.position = position;
-            current_shotStartPoint = position;
-            current_shotDirection = direction;
-            ShootAction(direction);
+            current_stepPoint = transform.position = GetShotStartPosition(aimPosition, barrelPosition);
+            current_direction = direction;
 
             if (aliveTime < Mathf.Infinity)
             {
@@ -124,6 +173,8 @@ namespace Than.Projectiles
                 deathCountdownCoroutine = DeathCountdown();
                 StartCoroutine(DeathCountdown());
             }
+
+            OnShootAction();
         }
 
         IEnumerator deathCountdownCoroutine;
@@ -135,36 +186,62 @@ namespace Than.Projectiles
             deathCountdownCoroutine = null;
         }
 
-        protected abstract void ShootAction(Vector3 direction);
+        protected virtual void OnShootAction() { }
 
         protected bool ColliderAllowed(Collider collider)
         {
             return !collider.transform.UnderParent(source.bodyRoot);
         }
 
-        public bool TryHit(HitData hitData)
+
+        public enum HitResult { reflect, die }
+
+        public bool CanHit(HitData hitData)
         {
             if (!ColliderAllowed(hitData.collider))
                 return false;
 
-            currentHits.Add(hitData);
-
-            bool willDie = currentHits.Count < hitsBeforeDeath && CanReflect(hitData);
-            OnHitAction(hitData, willDie);
-            PerformParticleHit(hitData);
-            onHit?.Invoke(hitData);
-
-            if (willDie)
-            {
-                Shoot(hitData.point, GetHitReflect(hitData));
-            }
-            else
-            {
-                Die();
-            }
-
             return true;
         }
+
+        protected void Hit(HitData hitData)
+        {
+            allHits.Add(hitData);
+
+            OnHitAction(hitData);
+            PerformParticleHit(hitData);
+            onHit?.Invoke(hitData);
+        }
+
+
+        // protected int HitStep(float distance)
+        // {
+        //     (int hits, Vector3 finalPosition) = Hitscan(current_stepPoint, current_direction, distance);
+        //     Vector3 startPosition = current_stepPoint;
+        //     current_stepPoint = finalPosition;
+        //     transform.position = finalPosition;
+
+        //     if (hits > 0)
+        //     {
+        //         for (int i = 0; i < hits; i++)
+        //         {
+        //             Hit(cached_hitData[i]);
+        //         }
+
+        //         //* try to reflect off the last hit
+        //         HitData lastHitData = cached_hitData[hits - 1];
+        //         bool reflect = current_reflects < reflects && CanReflect(lastHitData);
+
+        //         if (reflect)
+        //         {
+        //             current_direction = GetHitReflect(lastHitData);
+        //             distance -= Vector3.Distance(startPosition, finalPosition);
+        //             return HitStep(distance);
+        //         }
+        //     }
+
+        //     return hits;
+        // }
 
         void PerformParticleHit(HitData hitData)
         {
@@ -185,7 +262,7 @@ namespace Than.Projectiles
             hitParticle.Emit(emitParams, particleCount);
         }
 
-        protected virtual void OnHitAction(HitData hitData, bool willDieAfterHit) { }
+        protected virtual void OnHitAction(HitData hitData) { }
         protected virtual void OnDeathStart() { }
         protected virtual void OnDeathEnd() { }
 
@@ -196,7 +273,7 @@ namespace Than.Projectiles
 
         protected virtual Vector3 GetHitReflect(HitData hitData)
         {
-            return Vector3.Reflect(hitData.shotDirection, hitData.normal);
+            return Vector3.Reflect(hitData.shotDirection, hitData.normal).normalized;
         }
 
         bool destroyed = false;
@@ -205,9 +282,11 @@ namespace Than.Projectiles
             destroyed = true;
         }
 
+        protected bool dead = false;
         protected virtual async void Die()
         {
             OnDeathStart();
+            dead = true;
             await Task.Delay((int)(deathTime * 1000));
 
             if (destroyed)
@@ -230,12 +309,6 @@ namespace Than.Projectiles
             gameObject.SetActive(false);
         }
 
-        void OnCollisionEnter(Collision collision)
-        {
-            HitData hitData = new HitData(this, collision);
-            TryHit(hitData);
-        }
-
         public struct HitData
         {
             public Collider collider;
@@ -244,37 +317,39 @@ namespace Than.Projectiles
             public Projectile projectile;
             public Vector3 shotDirection;
             public Vector3 shotStartPoint;
+            public float distanceFromShotStart;
 
-            public HitData(Projectile projectile, Collider collider, Vector3 point, Vector3 normal)
-            {
-                this.collider = collider;
-                this.point = point;
-                this.normal = normal;
-                this.projectile = projectile;
-                this.shotDirection = projectile.current_shotDirection;
-                this.shotStartPoint = projectile.current_shotStartPoint;
-            }
+            // public HitData(Projectile projectile, Collider collider, Vector3 point, Vector3 normal)
+            // {
+            //     this.collider = collider;
+            //     this.point = point;
+            //     this.normal = normal;
+            //     this.projectile = projectile;
+            //     this.shotDirection = projectile.current_direction;
+            //     this.shotStartPoint = projectile.current_stepPoint;
+            // }
 
             public HitData(Projectile projectile, RaycastHit raycastHit)
             {
                 this.collider = raycastHit.collider;
                 this.point = raycastHit.point;
                 this.normal = raycastHit.normal;
+                distanceFromShotStart = raycastHit.distance;
                 this.projectile = projectile;
-                this.shotDirection = projectile.current_shotDirection;
-                this.shotStartPoint = projectile.current_shotStartPoint;
+                this.shotDirection = projectile.current_direction;
+                this.shotStartPoint = projectile.current_stepPoint;
             }
 
-            public HitData(Projectile projectile, Collision collision)
-            {
-                this.collider = collision.collider;
-                var contact = collision.GetContact(0);
-                this.point = contact.point;
-                this.normal = contact.normal;
-                this.projectile = projectile;
-                this.shotDirection = projectile.current_shotDirection;
-                this.shotStartPoint = projectile.current_shotStartPoint;
-            }
+            // public HitData(Projectile projectile, Collision collision)
+            // {
+            //     this.collider = collision.collider;
+            //     var contact = collision.GetContact(0);
+            //     this.point = contact.point;
+            //     this.normal = contact.normal;
+            //     this.projectile = projectile;
+            //     this.shotDirection = projectile.current_direction;
+            //     this.shotStartPoint = projectile.current_stepPoint;
+            // }
         }
     }
 }

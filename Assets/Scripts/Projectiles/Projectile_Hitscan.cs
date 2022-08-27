@@ -6,89 +6,99 @@ namespace Than.Projectiles
 {
     public class Projectile_Hitscan : Projectile
     {
-        const float infinity_maxVisualDistance = 100;
+        //const float infinity_maxVisualDistance = 100;
 
-        RaycastHit[] raycastAllocation = new RaycastHit[10];
+        // public LineRenderer lineRenderer;
+        // bool hasLineRenderer = false;
 
-        public LineRenderer lineRenderer;
-        bool hasLineRenderer = false;
+        // void Awake()
+        // {
+        //     hasLineRenderer = lineRenderer;
+        // }
 
-        public LayerMask layerMask { get; private set; }
-
-        void Awake()
+        protected override Vector3 GetShotStartPosition(Vector3 aimPosition, Vector3 barrelPosition)
         {
-            layerMask = gameObject.layer.GetLayerMaskFromCollisionMatrix();
-            hasLineRenderer = lineRenderer;
+            //*realign the raycast to always start from the aim center, for accuracy sake
+            return aimPosition;
         }
 
-        protected override void ShootAction(Vector3 direction)
+        protected override void OnShootAction()
         {
-            if (hasLineRenderer)
-                lineRenderer.enabled = false;
-
-            int hits;
-            if (hitRadius > 0)
-                hits = Physics.RaycastNonAlloc(current_shotStartPoint, current_shotDirection, raycastAllocation, maxShootDistance, layerMask);
-            else
-                hits = Physics.SphereCastNonAlloc(current_shotStartPoint, hitRadius, current_shotDirection, raycastAllocation, maxShootDistance, layerMask);
-
-            for (int i = 0; i < hits; i++)
+            float dist = maxShootDistance;
+            while (dist > 0)
             {
-                HitData hitData = new HitData(this, raycastAllocation[i]);
-                if (TryHit(hitData))
+                current_stepPoint = transform.position;
+
+                Vector3 endPosition = transform.position + current_direction * dist;
+                int hits = Hitscan(current_stepPoint, current_direction, dist);
+
+                if (hits > 0)
                 {
-                    transform.position = hitData.point;
-                    return;
+                    HitData lastHitData = cached_hitData[hits - 1];
+                    transform.position = lastHitData.point;
+                    dist -= lastHitData.distanceFromShotStart;
+
+                    bool reflect = current_reflects < reflects && CanReflect(lastHitData) && dist > 0;
+                    if (reflect)
+                        current_direction = GetHitReflect(lastHitData);
+                    else
+                        break;
+                }
+                else
+                {
+                    transform.position = transform.position + current_direction * maxShootDistance;
+                    break;
                 }
             }
 
-            RenderPositionUpdate(true);
+            Die();
         }
 
-        protected override void OnHitAction(HitData hitData, bool willDieAfterHit)
-        {
-            RenderPositionUpdate(false);
-        }
+        // protected override void OnHitAction(HitData hitData, bool willDieAfterHit)
+        // {
+        //     RenderPositionUpdate(false);
+        // }
 
-        void RenderPositionUpdate(bool addExtraPoint = false)
-        {
-            Vector3[] positions = BuildPointData(addExtraPoint);
-            RefreshLineRenderer(positions);
-        }
+        // void RenderPositionUpdate(bool addExtraPoint = false)
+        // {
+        //     Vector3[] positions = BuildPointData(addExtraPoint);
+        //     RefreshLineRenderer(positions);
+        // }
 
-        Vector3[] BuildPointData(bool addExtraPoint = false)
-        {
-            int hitCount = currentHits.Count;
-            int positionCount = 1 + hitCount + addExtraPoint.ToInt();
 
-            Vector3[] positions = new Vector3[positionCount];
+        // Vector3[] BuildPointData(bool addExtraPoint = false)
+        // {
+        //     int hitCount = currentHits.Count;
+        //     int positionCount = 1 + hitCoualldExtraPoint.ToInt();
 
-            positions[0] = hitCount > 0 ? currentHits[0].shotStartPoint : current_shotStartPoint;
+        //     Vector3[] positions = new Vector3[positionCount];
 
-            int index;
-            for (index = 1; index <= hitCount; index++)
-                positions[index] = currentHits[index - 1].point;
+        //     positions[0] = hitCountallcurrentHits[0].shotStartPoint : current_shotStartPoint;
 
-            if (index < positionCount)
-            {
-                //*Set up last shot
-                float visualDist = infinity_maxVisualDistance;
-                if (maxShootDistance < Mathf.Infinity)
-                    visualDist = maxShootDistance;
-                positions[index] = current_shotStartPoint + current_shotDirection * visualDist;
-            }
+        //     int index;
+        //     for (index = 1; index <= hitCount; index++)
+        //         positions[index] = currentHits[index - 1].point;
 
-            return positions;
-        }
+        //     if (index < positionCount)
+        //     {
+        //         //*Set up last shot
+        //         float visualDist = infinity_maxVisualDistance;
+        //         if (maxShootDistance < Mathf.Infinity)
+        //             visualDist = maxShootDistance;
+        //         positions[index] = current_shotStartPoint + current_shotDirection * visualDist;
+        //     }
 
-        void RefreshLineRenderer(Vector3[] positions)
-        {
-            if (!hasLineRenderer)
-                return;
+        //     return positions;
+        // }
 
-            lineRenderer.enabled = true;
-            lineRenderer.positionCount = positions.Length;
-            lineRenderer.SetPositions(positions);
-        }
+        // void RefreshLineRenderer(Vector3[] positions)
+        // {
+        //     if (!hasLineRenderer)
+        //         return;
+
+        //     lineRenderer.enabled = true;
+        //     lineRenderer.positionCount = positions.Length;
+        //     lineRenderer.SetPositions(positions);
+        // }
     }
 }

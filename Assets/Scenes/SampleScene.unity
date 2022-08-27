@@ -380,7 +380,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &104606602
 Transform:
   m_ObjectHideFlags: 0
@@ -671,6 +671,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  projectile_gunOffsetTransform: {fileID: 1573140770}
   gunAudio: {fileID: 1814554195}
   base_projectileSpread: 0
   bloom_projectileSpreadIncreaseOverTime: 0.2
@@ -683,7 +684,7 @@ MonoBehaviour:
   brain: {fileID: 1651546417}
   projectiles:
     addressableReference:
-      m_AssetGUID: a343040aef92f4540989810514525328
+      m_AssetGUID: c88e3a6880938ca44a243bff5686b266
       m_SubObjectName: 
       m_SubObjectType: 
       m_EditorAssetChanged: 0
@@ -2725,6 +2726,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  projectile_gunOffsetTransform: {fileID: 638781677}
   gunAudio: {fileID: 1814554195}
   base_projectileSpread: 0
   bloom_projectileSpreadIncreaseOverTime: 0.2
@@ -13065,7 +13067,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1162875634
 Transform:
   m_ObjectHideFlags: 0
@@ -13126,6 +13128,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  projectile_gunOffsetTransform: {fileID: 1162875634}
   gunAudio: {fileID: 1814554195}
   base_projectileSpread: 0.2
   bloom_projectileSpreadIncreaseOverTime: 0.03
@@ -20769,7 +20772,7 @@ MonoBehaviour:
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
-    m_SensorSize: {x: 1.7289417, y: 1}
+    m_SensorSize: {x: 1.0854573, y: 1}
   m_Transitions:
     m_BlendHint: 0
     m_InheritPosition: 0
