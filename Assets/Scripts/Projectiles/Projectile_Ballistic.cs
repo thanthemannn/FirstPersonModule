@@ -1,49 +1,97 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Than.Physics3D;
 
 namespace Than.Projectiles
 {
     public class Projectile_Ballistic : Projectile
     {
-        public float force = 10;
-        public float correctionRate = 5;
-        public AnimationCurve correctionCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-        Vector3 aimPosition;
-        protected override Vector3 GetShotStartPosition(Vector3 aimPosition, Vector3 barrelPosition)
+        public float force = 30;
+
+        public Vector3 velocity { get { return m_vel; } set { m_vel = value; current_direction = value.normalized; } }
+        Vector3 m_vel;
+        public Vector3 gravity;
+        public float drag = 0;
+        [Min(0)] public float reflectForce = 1;
+        [Min(.01f)] public float correctionDistance = (float)UMath.goldenRatio;
+
+        //*realign the raycast to always start from the barrel, since the projectile can be seen by the player
+        protected override bool ShootsFromCrosshair => false;
+
+
+        Vector3 barrel_visualPosition;
+        Vector3 crosshair_visualPosition;
+        float shot_correctionRate;
+
+        protected override void OnShootAction(ShootData shootData)
         {
             dist = 0;
-            this.aimPosition = aimPosition;
-            //*realign the raycast to always start from the aim center, for accuracy sake
-            return barrelPosition;
+            barrel_visualPosition = shootData.Barrel_positionStart;
+            crosshair_visualPosition = shootData.Crosshair_positionStart;
+            shot_correctionRate = 1 / correctionDistance;
+            velocity = force * shootData.shootDirection;
         }
 
         float dist = 0;
+        float threshold_reflectedTime = .05f;
         void Update()
         {
             if (dead)
                 return;
 
-            float forceDist = force * Time.deltaTime;
-            Vector3 dir = current_direction * forceDist;
+            Debug.DrawLine(transform.position, crosshair_visualPosition, Color.blue, 1f);
+            Debug.DrawLine(current_castStepPoint, transform.position, Color.red, 1f);
 
-            current_stepPoint = Vector3.Lerp(current_stepPoint, aimPosition, correctionCurve.Evaluate(dist * correctionRate));
-            aimPosition += dir;
+            //* Apply gravity. Gravity is multiplied by deltaTime twice
+            //* This is because gravity should be applied as an acceleration (ms^-2)
+            Vector3 g = gravity * Time.deltaTime;
+            Vector3 v = (velocity + gravity) * Time.deltaTime;
 
-            int hits = Hitscan(current_stepPoint, current_direction, forceDist);
+
+            Vector3 nextPosition;
+
+            if (current_reflects == 0)
+            {
+                barrel_visualPosition += v;
+                crosshair_visualPosition += v;
+
+                nextPosition = Vector3.Lerp(barrel_visualPosition, crosshair_visualPosition, UMath.EaseOut(Mathf.Clamp01(dist * shot_correctionRate)));
+            }
+            else
+                nextPosition = transform.position + v;
+
+
+
+            Vector3 adjustedMoveStep = nextPosition - current_castStepPoint;
+            Vector3 adjustedMoveStep_dir = adjustedMoveStep.normalized;
+            float adjustedMoveStep_magnitude = adjustedMoveStep.magnitude;
+            int hits = Hitscan(current_castStepPoint, adjustedMoveStep_dir, adjustedMoveStep_magnitude);
 
             if (hits > 0)
             {
-                HitData lastHitData = cached_hitData[hits - 1];
-                current_stepPoint = lastHitData.point;
-                Die();
+                HitData lastHit = cached_hitData[hits - 1];
+                current_castStepPoint = lastHit.projectileHitPoint;
+
+                bool reflect = current_reflects < reflects && CanReflect(lastHit);
+                if (reflect)
+                {
+                    velocity = HitReflect(v, lastHit).normalized * velocity.magnitude * reflectForce;
+                }
+                else
+                    Die();
             }
             else
-                current_stepPoint += dir;
+            {
+                current_castStepPoint = nextPosition;
+                dist += v.magnitude;
+            }
 
-            dist += forceDist;
+            m_vel = PhysicsBody.ApplyDrag(velocity, drag);
+            transform.position = current_castStepPoint;
 
-            transform.position = current_stepPoint;
+            if (dist > maxShootDistance)
+                Die();
         }
 
 

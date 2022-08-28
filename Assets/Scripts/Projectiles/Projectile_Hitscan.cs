@@ -16,31 +16,27 @@ namespace Than.Projectiles
         //     hasLineRenderer = lineRenderer;
         // }
 
-        protected override Vector3 GetShotStartPosition(Vector3 aimPosition, Vector3 barrelPosition)
-        {
-            //*realign the raycast to always start from the aim center, for accuracy sake
-            return aimPosition;
-        }
 
-        protected override void OnShootAction()
+        protected override void OnShootAction(ShootData shootData)
         {
             float dist = maxShootDistance;
             while (dist > 0)
             {
-                current_stepPoint = transform.position;
-
-                Vector3 endPosition = transform.position + current_direction * dist;
-                int hits = Hitscan(current_stepPoint, current_direction, dist);
+                Vector3 endPosition = current_castStepPoint + current_direction * dist;
+                int hits = Hitscan(current_castStepPoint, current_direction, dist);
 
                 if (hits > 0)
                 {
                     HitData lastHitData = cached_hitData[hits - 1];
-                    transform.position = lastHitData.point;
-                    dist -= lastHitData.distanceFromShotStart;
+                    transform.position = lastHitData.projectileHitPoint;
+                    dist -= lastHitData.raycast.distance;
 
                     bool reflect = current_reflects < reflects && CanReflect(lastHitData) && dist > 0;
                     if (reflect)
-                        current_direction = GetHitReflect(lastHitData);
+                    {
+                        current_castStepPoint = transform.position;
+                        current_direction = HitReflect(current_direction, lastHitData).normalized;
+                    }
                     else
                         break;
                 }

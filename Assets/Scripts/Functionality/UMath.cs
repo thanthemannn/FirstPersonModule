@@ -84,7 +84,7 @@ public static class UMath
     }
     public static Vector2Int Sign(Vector2Int value)
     {
-        return new Vector2Int((int) Mathf.Sign(value.x), (int) Mathf.Sign(value.y));
+        return new Vector2Int((int)Mathf.Sign(value.x), (int)Mathf.Sign(value.y));
     }
 
     public static int GetSignIfValue(float value)
@@ -309,6 +309,21 @@ public static class UMath
         Vector3 relativePosition = position - origin;
 
         return relativePosition;
+    }
+
+
+    public static float EaseIn(float t)
+    {
+        return 1 - Mathf.Cos(t * Mathf.PI) * .5f;
+    }
+    public static float EaseOut(float t)
+    {
+        return -(Mathf.Cos(t * Mathf.PI) - 1) * .5f;
+    }
+
+    public static float EaseInOut(float t)
+    {
+        return Mathf.Sin(t * Mathf.PI) * .5f;
     }
 
     //Fast and Funky 1D Nonlinear Transformations

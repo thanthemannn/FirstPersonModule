@@ -639,14 +639,18 @@ namespace Than.Projectiles
             return forwardRotation * spreadPoint * spread;
         }
 
+
+
         public virtual void ShootProjectiles(Projectile[] projectiles)
         {
+            Projectile.ShootData shootData = new Projectile.ShootData(this);
             Vector3 forward = transform.forward;
             Quaternion forwardRotation = Quaternion.LookRotation(forward, transform.up);
 
-            Vector3 barrelStartPosition = projectile_gunOffsetTransform.position;
-            Vector3 local = transform.InverseTransformPoint(barrelStartPosition);
-            Vector3 aimStartPosition = transform.position + forward * local.z;
+            // Vector3 barrelOffset = projectile_gunOffsetTransform.position;
+            // Vector3 local = transform.InverseTransformPoint(barrelOffset);
+            // Vector3 aimStartPosition = transform.position + forward * local.z;
+            //Vector3 startOffset = transform.position + forward * local.z;
 
             float currentSpread = Current_ProjectileSpread;
             float radianOffset = Random.value;
@@ -663,10 +667,10 @@ namespace Than.Projectiles
                 projectiles[i].onDeath -= OnProjectileDeath;
                 projectiles[i].onDeath += OnProjectileDeath;
 
-                Vector3 dir = forward + GetSpreadPoint(i, projectilesLength, currentSpread, radianOffset, forwardRotation);
+                shootData.shootDirection = (forward + GetSpreadPoint(i, projectilesLength, currentSpread, radianOffset, forwardRotation)).normalized;
 
                 projectiles[i].gameObject.SetActive(true);
-                projectiles[i].Shoot(aimStartPosition, barrelStartPosition, dir.normalized);
+                projectiles[i].Shoot(shootData);
             }
 
             current_heldShotsFired++;

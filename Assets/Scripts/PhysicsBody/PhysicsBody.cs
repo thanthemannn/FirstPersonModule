@@ -287,7 +287,7 @@ namespace Than.Physics3D
             if (!isGroundedRaw)
             {
                 //* Apply gravity. Gravity is multiplied by deltaTime twice (once here, once when used in velocity with characterController.Move())
-                //* This is because gravidescentuld be applied as an acceleration (ms^-2)
+                //* This is because gravity should be applied as an acceleration (ms^-2)
                 current_gravityScale = velocity.y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
                 gravity = Physics.gravity * current_gravityScale * Time.deltaTime;
             }
