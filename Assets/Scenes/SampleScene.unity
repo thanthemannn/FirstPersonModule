@@ -319,7 +319,7 @@ GameObject:
   m_Component:
   - component: {fileID: 59786501}
   - component: {fileID: 59786502}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Guns
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -368,6 +368,7 @@ GameObject:
   m_Component:
   - component: {fileID: 104606602}
   - component: {fileID: 104606609}
+  - component: {fileID: 104606610}
   - component: {fileID: 104606608}
   - component: {fileID: 104606607}
   - component: {fileID: 104606606}
@@ -380,7 +381,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &104606602
 Transform:
   m_ObjectHideFlags: 0
@@ -673,17 +674,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectile_gunOffsetTransform: {fileID: 1573140770}
-  gunAudio: {fileID: 1814554195}
-  base_projectileSpread: 0
-  bloom_projectileSpreadIncreaseOverTime: 0.2
-  bloom_returnSpeed: 1
-  bloom_max_projectileSpreadIncreaseOverTime: 0.1
-  projectilesPerShot: 1
-  ammoPerClip: 8
+  reloadAnimation: {fileID: 7400000, guid: 9fbce83900fd13f4bae39844e725de59, type: 2}
+  gunBarrelTransform: {fileID: 1896754990}
   equipTime: 0.5
   unequipTime: 0.2
-  brain: {fileID: 1651546417}
+  ammoPerMagazine: 8
+  reloadAmountPerLoop: -1
+  autoReloadWhenShootingEmpty: 1
   projectiles:
     addressableReference:
       m_AssetGUID: c88e3a6880938ca44a243bff5686b266
@@ -692,55 +689,12 @@ MonoBehaviour:
       m_EditorAssetChanged: 0
     prewarmSize: -1
     allowInstantiationBeyondPrewarm: 1
-  bodyRoot: {fileID: 0}
-  chargeup: 0
-  cooldown: 0.06666667
-  holdForAutomatic: 0
-  returnSpeed_alertLevel: 5
-  onShootEvent:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1573140772}
-        m_TargetAssemblyTypeName: UnityEngine.ParticleSystem, UnityEngine
-        m_MethodName: Play
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  shooting_moveSpeedLimit: 6
-  autoReloadWhenShootingEmpty: 1
-  reloadAmountPerLoop: -1
-  reload_moveSpeedLimit: 6
-  aiming_moveSpeedLimit: 8
-  aim_zoomMultiplier: 1.6
-  aim_zoomTime: 0.1
-  aim_zoomResetTime: 0.2
-  sprintThreshold: 12
-  sprintTransitionTime: 0.2
-  recoil_moveSpeedMultiplierThreshold: 4
-  aimRecoil:
-    recoilBody: {fileID: 1814554194}
-    snappiness: 12
-    returnSpeed: 12
-    aimMultiplier: 0.3333
-    moveMultiplier: 1.2
-    forceRange_max: {x: 1, y: 1, z: 0.6}
-    forceRange_min: {x: -0.5, y: -1, z: -0.6}
-  gunRecoil:
-    recoilBody: {fileID: 104606607}
-    snappiness: 6
-    returnSpeed: 6
-    aimMultiplier: 0.5
-    moveMultiplier: 2
-    forceRange_max: {x: 1, y: 1, z: 0.5}
-    forceRange_min: {x: -1, y: -1, z: -0.5}
-  reloadAnimation: {fileID: 7400000, guid: 9fbce83900fd13f4bae39844e725de59, type: 2}
-  spreadPatternRandomWeightDistribution:
+  projectilesPerShot: 1
+  fire_chargeup: 0
+  fire_cooldown: 0.5
+  fire_holdForAutomatic: 1
+  base_projectileSpread: 0
+  spreadPatternRandomWeightDistribution_projectileSpread:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -764,6 +718,37 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  bloom_increaseOverTime_projectileSpread: 0.2
+  bloom_max_increaseOverTime_projectileSpread: 0.1
+  bloom_returnSpeed_projectileSpread: 1
+  aim_zoomMultiplier: 1.4
+  aim_zoomTime: 0.1
+  aim_zoomResetTime: 0.2
+  aimRecoil:
+    recoilBody: {fileID: 1814554194}
+    snappiness: 12
+    returnSpeed: 12
+    aimMultiplier: 0.3333
+    moveMultiplier: 1.2
+    forceRange_max: {x: 1, y: 1, z: 0.6}
+    forceRange_min: {x: -0.5, y: -1, z: -0.6}
+  gunRecoil:
+    recoilBody: {fileID: 104606607}
+    snappiness: 6
+    returnSpeed: 6
+    aimMultiplier: 0.5
+    moveMultiplier: 2
+    forceRange_max: {x: 1, y: 1, z: 0.5}
+    forceRange_min: {x: -1, y: -1, z: -0.5}
+  returnSpeed_alertLevel: 5
+  shooting_moveSpeedLimit: 6
+  reload_moveSpeedLimit: 6
+  aiming_moveSpeedLimit: 8
+  recoil_moveSpeedMultiplierThreshold: 4
+  sprintTransitionTime: 0.2
+  onShootEvent:
+    m_PersistentCalls:
+      m_Calls: []
   gizmosPreview_shotDistanceTestDelta: 5
 --- !u!114 &104606609
 MonoBehaviour:
@@ -780,6 +765,19 @@ MonoBehaviour:
   crossfadeDuration: 0.1
   shoot_crossfadeDuration: 0.02
   shootLockTime: 0.2
+--- !u!114 &104606610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 104606601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2441e4669bc9c6c4a897be3727675c65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  muzzleFlash: {fileID: 1573140772}
 --- !u!1 &110821769
 GameObject:
   m_ObjectHideFlags: 0
@@ -1669,7 +1667,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 247
+    m_Bits: 503
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -2555,6 +2553,7 @@ GameObject:
   m_Component:
   - component: {fileID: 638781677}
   - component: {fileID: 638781684}
+  - component: {fileID: 638781685}
   - component: {fileID: 638781678}
   - component: {fileID: 638781679}
   - component: {fileID: 638781680}
@@ -2596,17 +2595,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectile_gunOffsetTransform: {fileID: 638781677}
-  gunAudio: {fileID: 1814554195}
-  base_projectileSpread: 0
-  bloom_projectileSpreadIncreaseOverTime: 0.2
-  bloom_returnSpeed: 1
-  bloom_max_projectileSpreadIncreaseOverTime: 0.1
-  projectilesPerShot: 1
-  ammoPerClip: 32
+  reloadAnimation: {fileID: 7400000, guid: 9fbce83900fd13f4bae39844e725de59, type: 2}
+  gunBarrelTransform: {fileID: 1833405981}
   equipTime: 0.5
   unequipTime: 0.2
-  brain: {fileID: 1651546417}
+  ammoPerMagazine: 32
+  reloadAmountPerLoop: -1
+  autoReloadWhenShootingEmpty: 1
   projectiles:
     addressableReference:
       m_AssetGUID: a343040aef92f4540989810514525328
@@ -2615,55 +2610,12 @@ MonoBehaviour:
       m_EditorAssetChanged: 0
     prewarmSize: -1
     allowInstantiationBeyondPrewarm: 1
-  bodyRoot: {fileID: 0}
-  chargeup: 0
-  cooldown: 0.06666667
-  holdForAutomatic: 1
-  returnSpeed_alertLevel: 5
-  onShootEvent:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 831307148}
-        m_TargetAssemblyTypeName: UnityEngine.ParticleSystem, UnityEngine
-        m_MethodName: Play
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  shooting_moveSpeedLimit: 6
-  autoReloadWhenShootingEmpty: 1
-  reloadAmountPerLoop: -1
-  reload_moveSpeedLimit: 6
-  aiming_moveSpeedLimit: 8
-  aim_zoomMultiplier: 1.6
-  aim_zoomTime: 0.1
-  aim_zoomResetTime: 0.2
-  sprintThreshold: 12
-  sprintTransitionTime: 0.2
-  recoil_moveSpeedMultiplierThreshold: 4
-  aimRecoil:
-    recoilBody: {fileID: 1814554194}
-    snappiness: 12
-    returnSpeed: 12
-    aimMultiplier: 0.3333
-    moveMultiplier: 1.2
-    forceRange_max: {x: 1, y: 1, z: 0.6}
-    forceRange_min: {x: -0.5, y: -1, z: -0.6}
-  gunRecoil:
-    recoilBody: {fileID: 638781679}
-    snappiness: 6
-    returnSpeed: 6
-    aimMultiplier: 0.5
-    moveMultiplier: 2
-    forceRange_max: {x: 1, y: 1, z: 0.5}
-    forceRange_min: {x: -1, y: -1, z: -0.5}
-  reloadAnimation: {fileID: 7400000, guid: 9fbce83900fd13f4bae39844e725de59, type: 2}
-  spreadPatternRandomWeightDistribution:
+  projectilesPerShot: 1
+  fire_chargeup: 0
+  fire_cooldown: 0.092307694
+  fire_holdForAutomatic: 1
+  base_projectileSpread: 0
+  spreadPatternRandomWeightDistribution_projectileSpread:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -2687,6 +2639,37 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  bloom_increaseOverTime_projectileSpread: 0.2
+  bloom_max_increaseOverTime_projectileSpread: 0.1
+  bloom_returnSpeed_projectileSpread: 1
+  aim_zoomMultiplier: 1.2
+  aim_zoomTime: 0.1
+  aim_zoomResetTime: 0.2
+  aimRecoil:
+    recoilBody: {fileID: 1814554194}
+    snappiness: 12
+    returnSpeed: 12
+    aimMultiplier: 0.3333
+    moveMultiplier: 1.2
+    forceRange_max: {x: 1, y: 1, z: 0.6}
+    forceRange_min: {x: -0.5, y: -1, z: -0.6}
+  gunRecoil:
+    recoilBody: {fileID: 638781679}
+    snappiness: 6
+    returnSpeed: 6
+    aimMultiplier: 0.5
+    moveMultiplier: 2
+    forceRange_max: {x: 1, y: 1, z: 0.5}
+    forceRange_min: {x: -1, y: -1, z: -0.5}
+  returnSpeed_alertLevel: 5
+  shooting_moveSpeedLimit: 6
+  reload_moveSpeedLimit: 6
+  aiming_moveSpeedLimit: 8
+  recoil_moveSpeedMultiplierThreshold: 4
+  sprintTransitionTime: 0.2
+  onShootEvent:
+    m_PersistentCalls:
+      m_Calls: []
   gizmosPreview_shotDistanceTestDelta: 5
 --- !u!114 &638781679
 MonoBehaviour:
@@ -2967,13 +2950,58 @@ MonoBehaviour:
   crossfadeDuration: 0.1
   shoot_crossfadeDuration: 0.02
   shootLockTime: 0.2
+--- !u!114 &638781685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 638781676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2441e4669bc9c6c4a897be3727675c65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  muzzleFlash: {fileID: 831307148}
+--- !u!1 &662591197
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 662591198}
+  m_Layer: 3
+  m_Name: BarrelTip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &662591198
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 662591197}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.004600018, y: 0.02849994, z: 1.023}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 808998676}
+  m_Father: {fileID: 543450651673245461}
+  m_RootOrder: 2
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!43 &802671537
 Mesh:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh33414
+  m_Name: pb_Mesh33422
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
@@ -3156,13 +3184,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 808998675}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0046, y: 0.0285, z: 1.023}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 543450651673245461}
-  m_RootOrder: 2
+  m_Father: {fileID: 662591198}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!199 &808998677
 ParticleSystemRenderer:
@@ -8047,13 +8075,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 831307145}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.033, z: 0.85}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 340793529}
-  m_RootOrder: 1
+  m_Father: {fileID: 1833405981}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!199 &831307147
 ParticleSystemRenderer:
@@ -13090,7 +13118,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 994186636}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -13113,6 +13141,122 @@ Transform:
   m_Father: {fileID: 1651546408}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1150991170
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1150991175}
+  - component: {fileID: 1150991174}
+  - component: {fileID: 1150991173}
+  - component: {fileID: 1150991172}
+  - component: {fileID: 1150991171}
+  m_Layer: 8
+  m_Name: Cylinder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!54 &1150991171
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150991170}
+  serializedVersion: 2
+  m_Mass: 50
+  m_Drag: 1
+  m_AngularDrag: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!136 &1150991172
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150991170}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  m_Radius: 0.5000001
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!23 &1150991173
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150991170}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1150991174
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150991170}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!4 &1150991175
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1150991170}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 2, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1872404586}
+  m_Father: {fileID: 0}
+  m_RootOrder: 8
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1162875633
 GameObject:
   m_ObjectHideFlags: 0
@@ -13123,6 +13267,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1162875634}
   - component: {fileID: 1162875641}
+  - component: {fileID: 1162875642}
   - component: {fileID: 1162875637}
   - component: {fileID: 1162875636}
   - component: {fileID: 1162875635}
@@ -13135,7 +13280,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1162875634
 Transform:
   m_ObjectHideFlags: 0
@@ -13196,17 +13341,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dd8d1c4d60b54f54786b58f3eea8926a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectile_gunOffsetTransform: {fileID: 1162875634}
-  gunAudio: {fileID: 1814554195}
-  base_projectileSpread: 0.2
-  bloom_projectileSpreadIncreaseOverTime: 0.03
-  bloom_returnSpeed: 1
-  bloom_max_projectileSpreadIncreaseOverTime: 0.33333334
-  projectilesPerShot: 15
-  ammoPerClip: 6
+  reloadAnimation: {fileID: 7400000, guid: 8661944bd4e58ad4e95a8b744b2ad98c, type: 2}
+  gunBarrelTransform: {fileID: 662591198}
   equipTime: 0.5
   unequipTime: 0.2
-  brain: {fileID: 1651546417}
+  ammoPerMagazine: 6
+  reloadAmountPerLoop: 1
+  autoReloadWhenShootingEmpty: 1
   projectiles:
     addressableReference:
       m_AssetGUID: 1b15122963eecc145a1c8cfec2204eb9
@@ -13215,55 +13356,12 @@ MonoBehaviour:
       m_EditorAssetChanged: 0
     prewarmSize: -1
     allowInstantiationBeyondPrewarm: 1
-  bodyRoot: {fileID: 0}
-  chargeup: 0
-  cooldown: 0.8
-  holdForAutomatic: 0
-  returnSpeed_alertLevel: 0.5
-  onShootEvent:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 808998678}
-        m_TargetAssemblyTypeName: UnityEngine.ParticleSystem, UnityEngine
-        m_MethodName: Play
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  shooting_moveSpeedLimit: 6
-  autoReloadWhenShootingEmpty: 1
-  reloadAmountPerLoop: 1
-  reload_moveSpeedLimit: 6
-  aiming_moveSpeedLimit: 8
-  aim_zoomMultiplier: 1.6
-  aim_zoomTime: 0.1
-  aim_zoomResetTime: 0.2
-  sprintThreshold: 12
-  sprintTransitionTime: 0.2
-  recoil_moveSpeedMultiplierThreshold: 4
-  aimRecoil:
-    recoilBody: {fileID: 1814554194}
-    snappiness: 12
-    returnSpeed: 12
-    aimMultiplier: 0.3333
-    moveMultiplier: 1.2
-    forceRange_max: {x: 1, y: 1, z: 0.6}
-    forceRange_min: {x: -0.5, y: -1, z: -0.6}
-  gunRecoil:
-    recoilBody: {fileID: 1162875636}
-    snappiness: 6
-    returnSpeed: 6
-    aimMultiplier: 0.5
-    moveMultiplier: 2
-    forceRange_max: {x: 2, y: 2, z: 0.5}
-    forceRange_min: {x: -5, y: -2, z: -0.5}
-  reloadAnimation: {fileID: 7400000, guid: 8661944bd4e58ad4e95a8b744b2ad98c, type: 2}
-  spreadPatternRandomWeightDistribution:
+  projectilesPerShot: 15
+  fire_chargeup: 0
+  fire_cooldown: 0.6666667
+  fire_holdForAutomatic: 1
+  base_projectileSpread: 0.2
+  spreadPatternRandomWeightDistribution_projectileSpread:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -13287,6 +13385,37 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  bloom_increaseOverTime_projectileSpread: 0.333
+  bloom_max_increaseOverTime_projectileSpread: 0.2
+  bloom_returnSpeed_projectileSpread: 1
+  aim_zoomMultiplier: 1.2
+  aim_zoomTime: 0.1
+  aim_zoomResetTime: 0.2
+  aimRecoil:
+    recoilBody: {fileID: 1814554194}
+    snappiness: 12
+    returnSpeed: 12
+    aimMultiplier: 0.3333
+    moveMultiplier: 1.2
+    forceRange_max: {x: 1, y: 1, z: 0.6}
+    forceRange_min: {x: -0.5, y: -1, z: -0.6}
+  gunRecoil:
+    recoilBody: {fileID: 1162875636}
+    snappiness: 6
+    returnSpeed: 6
+    aimMultiplier: 0.5
+    moveMultiplier: 2
+    forceRange_max: {x: 2, y: 2, z: 0.5}
+    forceRange_min: {x: -5, y: -2, z: -0.5}
+  returnSpeed_alertLevel: 0.5
+  shooting_moveSpeedLimit: 6
+  reload_moveSpeedLimit: 6
+  aiming_moveSpeedLimit: 8
+  recoil_moveSpeedMultiplierThreshold: 4
+  sprintTransitionTime: 0.2
+  onShootEvent:
+    m_PersistentCalls:
+      m_Calls: []
   gizmosPreview_shotDistanceTestDelta: 5
 --- !u!114 &1162875638
 MonoBehaviour:
@@ -13535,6 +13664,19 @@ MonoBehaviour:
   crossfadeDuration: 0.1
   shoot_crossfadeDuration: 0.02
   shootLockTime: 0.2
+--- !u!114 &1162875642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1162875633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2441e4669bc9c6c4a897be3727675c65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  muzzleFlash: {fileID: 808998678}
 --- !u!1 &1210798257
 GameObject:
   m_ObjectHideFlags: 0
@@ -14680,7 +14822,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1455145042}
   - component: {fileID: 1455145043}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: cm
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14801,13 +14943,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573140769}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.0123, y: 0.1077, z: 0.2005}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2032100073}
-  m_RootOrder: 1
+  m_Father: {fileID: 1896754990}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!199 &1573140771
 ParticleSystemRenderer:
@@ -19866,7 +20008,7 @@ GameObject:
   - component: {fileID: 1651546411}
   - component: {fileID: 1651546410}
   - component: {fileID: 1651546409}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Player
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -20460,7 +20602,7 @@ GameObject:
   - component: {fileID: 1814554193}
   - component: {fileID: 1814554194}
   - component: {fileID: 1814554195}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: AimBody-VirtualCam
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -20514,7 +20656,7 @@ MonoBehaviour:
     ModeOverride: 0
     LensShift: {x: 0, y: 0}
     GateFit: 2
-    m_SensorSize: {x: 1.849711, y: 1}
+    m_SensorSize: {x: 1.6141304, y: 1}
   m_Transitions:
     m_BlendHint: 0
     m_InheritPosition: 0
@@ -20723,6 +20865,84 @@ Transform:
   m_Father: {fileID: 638781677}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1833405980
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1833405981}
+  m_Layer: 3
+  m_Name: BarrelTip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1833405981
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1833405980}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.03300007, z: 0.8500002}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 831307146}
+  m_Father: {fileID: 340793529}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1872404585
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1872404586}
+  - component: {fileID: 1872404587}
+  m_Layer: 7
+  m_Name: Hitbox
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1872404586
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1872404585}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1150991175}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &1872404587
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1872404585}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  m_Radius: 0.5000001
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!43 &1895158193
 Mesh:
   m_ObjectHideFlags: 0
@@ -20887,6 +21107,38 @@ Mesh:
     offset: 0
     size: 0
     path: 
+--- !u!1 &1896754989
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1896754990}
+  m_Layer: 3
+  m_Name: BarrelTip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1896754990
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1896754989}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.01229998, y: 0.1077001, z: 0.2005}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1573140770}
+  m_Father: {fileID: 2032100073}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1943564661
 GameObject:
   m_ObjectHideFlags: 0
@@ -21254,7 +21506,7 @@ Transform:
   m_Children:
   - {fileID: 5694041533106432771}
   - {fileID: 3196138217330089534}
-  - {fileID: 808998676}
+  - {fileID: 662591198}
   - {fileID: 1377760134}
   m_Father: {fileID: 844563310}
   m_RootOrder: 0
@@ -21371,7 +21623,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 724579974489205238}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone.003_end_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -21551,7 +21803,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6429180822031144654}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Bone.002_end_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}

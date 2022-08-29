@@ -44,7 +44,8 @@ namespace Than.Projectiles
         public LayerMask layerMask { get; private set; }
         public LayerMask canPenetrateLayers = HITBOX_LAYERMASK;
 
-        RaycastHit[] cached_raycastAllocations;
+        //TODO Test to see if static caching of raycasts is safe, or will the local cached hitdata be overritten if this changes?
+        static public RaycastHit[] CACHED_RAYCASTS { get; private set; } = new RaycastHit[100];
         public HitData[] cached_hitData { get; private set; }
         int base_raycastSafetyAmount = 2;
         public int penetrateTargetCount = 0;
@@ -64,25 +65,34 @@ namespace Than.Projectiles
             hasHitParticle = hitParticle;
             layerMask = gameObject.layer.GetLayerMaskFromCollisionMatrix();
             int castSize = base_raycastSafetyAmount + penetrateTargetCount;
-            cached_raycastAllocations = new RaycastHit[castSize];
+            //cached_raycastAllocations = new RaycastHit[castSize];
             cached_hitData = new HitData[castSize];
 
             if (aliveTime < Mathf.Infinity)
                 wait_aliveTime = new WaitForSeconds(aliveTime);
         }
 
+        protected abstract Vector3 GetProjectileHitForce(HitData data);
+
+
+        Extensible.RaycastByDistance raycastComparison = new Extensible.RaycastByDistance();
         public int Hitscan(Vector3 position, Vector3 direction, float distance)
         {
             int hits;
             if (hitRadius > 0)
-                hits = Physics.RaycastNonAlloc(position, direction, cached_raycastAllocations, distance, layerMask);
+                hits = Physics.RaycastNonAlloc(position, direction, CACHED_RAYCASTS, distance, layerMask);
             else
-                hits = Physics.SphereCastNonAlloc(position, hitRadius, direction, cached_raycastAllocations, distance, layerMask);
+                hits = Physics.SphereCastNonAlloc(position, hitRadius, direction, CACHED_RAYCASTS, distance, layerMask);
+
+            //* We have to sort these raycasts by shortest distance as 3d raycasts are unsorted -_-
+            if (hits > 1)
+                System.Array.Sort(CACHED_RAYCASTS, 0, hits, raycastComparison);//delegate (RaycastHit hit1, RaycastHit hit2) { return hit1.distance.CompareTo(hit2.distance); });
 
             int validatedHits = 0;
             for (int i = 0; i < hits; i++)
             {
-                HitData hitData = new HitData(this, cached_raycastAllocations[i]);
+                //Debug.Log(cached_raycastAllocations[i].collider.gameObject);
+                HitData hitData = new HitData(this, CACHED_RAYCASTS[i]);
                 if (CanHit(hitData))
                 {
                     cached_hitData[validatedHits] = hitData;
@@ -111,7 +121,7 @@ namespace Than.Projectiles
             startTime = Time.time;
             StopAllCoroutines();
             this.source = source;
-            transform.position = source.projectile_gunOffsetTransform.position;
+            transform.position = source.gunBarrelTransform.position;
             transform.rotation = source.transform.rotation;
             current_reflects = 0;
             dead = false;
@@ -188,7 +198,7 @@ namespace Than.Projectiles
                 gunForward = gun.transform.forward;
                 shootDirection = gunForward; //* This may be changed later
 
-                Vector3 barrelWorld = gun.projectile_gunOffsetTransform.position;
+                Vector3 barrelWorld = gun.gunBarrelTransform.position;
                 Vector3 barrelLocalOffset = gun.transform.InverseTransformPoint(barrelWorld);
 
                 offset_positionStart = gunForward * barrelLocalOffset.z;
@@ -236,7 +246,10 @@ namespace Than.Projectiles
         public virtual bool CanHit(HitData hitData)
         {
             if (!ColliderAllowed(hitData.raycast.collider))
+            {
                 return false;
+            }
+
 
             return true;
         }
@@ -245,6 +258,12 @@ namespace Than.Projectiles
         {
             allHits.Add(hitData);
 
+            Vector3 applyForce = GetProjectileHitForce(hitData);
+
+            if (hitData.raycast.rigidbody)
+            {
+                hitData.raycast.rigidbody.AddForceAtPosition(applyForce, hitData.raycast.point, ForceMode.Impulse);
+            }
             OnHitAction(hitData);
             PerformParticleHit(hitData);
             onHit?.Invoke(hitData);
@@ -324,6 +343,7 @@ namespace Than.Projectiles
             public Vector3 shotDirection;
             public Vector3 shotStartPoint;
 
+            //TODO make sure that raycast hit data is not overritten when the cache is, if it is we may have to manually store all the relevant data types
             public RaycastHit raycast;
             public Vector3 projectileHitPoint;
             public float time;

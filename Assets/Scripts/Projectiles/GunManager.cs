@@ -43,7 +43,7 @@ namespace Than.Projectiles
 
         private void SwitchToWeaponInput()
         {
-            if (!guns[current_gunIndex].isActionCancellable)
+            if (!guns[current_gunIndex].IsActionCancellable)
                 return;
 
             int dir = UMath.GetSignIfValue(Mathf.RoundToInt(brain.SwitchWeapon.value));

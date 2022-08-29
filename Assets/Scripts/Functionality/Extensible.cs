@@ -12,6 +12,16 @@ using UnityEngine.Events;
 public static class Extensible
 {
 
+    public class RaycastByDistance : IComparer
+    {
+        int IComparer.Compare(object a, object b)
+        {
+            RaycastHit hit1 = (RaycastHit)a;
+            RaycastHit hit2 = (RaycastHit)b;
+            return hit1.distance.CompareTo(hit2.distance);
+        }
+    }
+
     [Flags]
     public enum Directions
     {

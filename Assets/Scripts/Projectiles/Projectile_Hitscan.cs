@@ -6,6 +6,13 @@ namespace Than.Projectiles
 {
     public class Projectile_Hitscan : Projectile
     {
+        public float hitForce = 10;
+
+        protected override Vector3 GetProjectileHitForce(HitData data)
+        {
+            return data.shotDirection * hitForce;
+        }
+
         //const float infinity_maxVisualDistance = 100;
 
         // public LineRenderer lineRenderer;
@@ -15,6 +22,7 @@ namespace Than.Projectiles
         // {
         //     hasLineRenderer = lineRenderer;
         // }
+
 
 
         protected override void OnShootAction(ShootData shootData)

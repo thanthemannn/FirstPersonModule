@@ -18,7 +18,7 @@ namespace Than.Projectiles
 
         void Update()
         {
-            textBox.SetText(gun.currentClipAmmo.ToString());
+            textBox.SetText(gun.currentMagazineAmmo.ToString());
         }
     }
 }

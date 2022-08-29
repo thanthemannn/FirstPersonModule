@@ -8,6 +8,7 @@ namespace Than.Projectiles
     public class Projectile_Ballistic : Projectile
     {
         public float force = 30;
+        public float hitForceMultiplier = 1;
 
         public Vector3 velocity { get { return m_vel; } set { m_vel = value; current_direction = value.normalized; } }
         Vector3 m_vel;
@@ -94,6 +95,9 @@ namespace Than.Projectiles
                 Die();
         }
 
-
+        protected override Vector3 GetProjectileHitForce(HitData data)
+        {
+            return velocity * hitForceMultiplier;
+        }
     }
 }
