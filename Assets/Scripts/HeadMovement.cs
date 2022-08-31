@@ -31,7 +31,7 @@ namespace Than.Physics3D
         void Update()
         {
             //*Calculate headbob
-            float movementSqrMagnitude = pb.lastManualMovement.sqrMagnitude;
+            float movementSqrMagnitude = pb.manualMovement_lastFixedUpdate.sqrMagnitude;
             if (movementSqrMagnitude < .1f || !pb.isGrounded)
             {
                 current_headbobTime = 0;

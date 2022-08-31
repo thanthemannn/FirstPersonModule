@@ -95,8 +95,9 @@ namespace Than.Physics3D
 
         void PerformJump(float force)
         {
-            if (pb.velocity.y < 0)
-                pb.velocity = new Vector3(pb.velocity.x, 0, pb.velocity.z);
+            Vector3 relVel = pb.RelativeVelocity;
+            if (relVel.y < 0)
+                pb.RelativeVelocity = new Vector3(relVel.x, 0, relVel.z);
 
             Vector3 forceDir = transform.up;
 

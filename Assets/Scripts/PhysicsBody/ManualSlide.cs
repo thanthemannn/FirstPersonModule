@@ -91,6 +91,7 @@ namespace Than.Physics3D
             if (onSlideableSlope)
                 v += PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, transform.up, speedOnSlope);
 
+        
             //* Manual slides are permitted if we are moving fast enough OR are on a slope with a strong enough angle
             if (onSlideableSlope || v.magnitude >= minVelocityForSlide)
             {
@@ -102,7 +103,7 @@ namespace Than.Physics3D
         IEnumerator RunSlide()
         {
             //*Runs slide as long as our manual movement isn't a stronger opposite force to our current slide velocity
-            while (Vector3.Dot(pb.manualMovement, velocity) > -velocity.magnitude)
+            while (Vector3.Dot(pb.manualMovement_lastFixedUpdate, velocity) > -velocity.magnitude)
             {
                 yield return null;
 

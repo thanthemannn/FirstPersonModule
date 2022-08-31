@@ -12,6 +12,9 @@ namespace Than.Physics3D
     [RequireComponent(typeof(PhysicsBody))]
     public class Movement : MonoBehaviour
     {
+        public float vSmoothTime = 0.1f;
+        public float airSmoothTime = 0.5f;
+
         #region  Public Properties and Events
         public PhysicsBody pb { get; private set; }
 
@@ -120,46 +123,90 @@ namespace Than.Physics3D
             inputBuffer = Vector2.zero;
         }
 
+        Vector3 targetVelocity;
+        Vector3 smoothVelocity;
+        Vector3 smoothVRef;
         void Update()
         {
-            //* Input acceleration / deceleration when we are in air / on ground
-            float rate;
-            if (brain.Move.held)
-                rate = pb.isGrounded ? move_accelerationRate : air_accelerationRate;
-            else
-                rate = pb.isGrounded ? move_deccelerationRate : air_deccelerationRate;
-
-            inputBuffer = Vector2.MoveTowards(inputBuffer, brain.Move, Time.deltaTime * rate);
+            //* Input
+            inputBuffer = brain.Move;
 
             //*Update our sprint status and associated values/events
             SprintLogicUpdate();
 
-            //*If we have no input, the rest of this function does not need to be performed
             if (inputBuffer == Vector2.zero)
-                return;
+            {
+                targetVelocity = Vector3.zero;
+            }
+            else
+            {
+                //*Adjust our movement to compensate for any slopes we may be on
+                Vector3 normal = transform.up;
+                if (pb.GroundCast(out groundHitInfo))
+                    normal = groundHitInfo.normal;
 
-            //*Base our current speed based on an interpolation between move and sprint speed values
-            speedTimeBuffer = Mathf.Clamp01(speedTimeBuffer + (sprinting.ToSign() * sprint_accelerationRate * Time.deltaTime));
-            float current_speed = Mathf.Lerp(moveSpeed, sprintSpeed, speedTimeBuffer);
+                //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
+                Transform transformSource = projectionRelativeTransform ? projectionRelativeTransform : transform;
+                Vector3 forward = Vector3.ProjectOnPlane(transformSource.forward, normal).normalized;
+                Vector3 right = Vector3.ProjectOnPlane(transformSource.right, normal).normalized;
 
-            //*Adjust our movement to compensate for any slopes we may be on
-            Vector3 normal = transform.up;
-            // if (pb.GroundCast(out groundHitInfo))
-            //     normal = groundHitInfo.normal;
+                //*Apply our movement values
+                Vector3 moveDirection = forward * inputBuffer.y + right * inputBuffer.x;
+                if (sprinting)
+                    moveDirection = moveDirection.normalized;
 
-            //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
-            Transform transformSource = projectionRelativeTransform ? projectionRelativeTransform : transform;
-            Vector3 forward = Vector3.ProjectOnPlane(transformSource.forward, normal).normalized;
-            Vector3 right = Vector3.ProjectOnPlane(transformSource.right, normal).normalized;
+                //*Target velocity processing
+                float current_speed = sprinting ? sprintSpeed : moveSpeed;
+                targetVelocity = moveDirection * current_speed;
+            }
 
-            //*Apply our movement values
-            Vector3 moveDirection = forward * inputBuffer.y + right * inputBuffer.x;
-            if (sprinting)
-                moveDirection = moveDirection.normalized;
+            //*Smooth velocity ensures we change our movement... smoothly
+            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime);
 
             //*Move in direction * speed (velocity)
-            pb.Move(moveDirection * current_speed);
+            pb.Move(smoothVelocity);
         }
+
+        // void Update()
+        // {
+        //     //* Input acceleration / deceleration when we are in air / on ground
+        //     float rate;
+        //     if (brain.Move.held)
+        //         rate = pb.isGrounded ? move_accelerationRate : air_accelerationRate;
+        //     else
+        //         rate = pb.isGrounded ? move_deccelerationRate : air_deccelerationRate;
+
+        //     inputBuffer = Vector2.MoveTowards(inputBuffer, brain.Move, Time.deltaTime * rate);
+
+        //     //*Update our sprint status and associated values/events
+        //     SprintLogicUpdate();
+
+        //     //*If we have no input, the rest of this function does not need to be performed
+        //     if (inputBuffer == Vector2.zero)
+        //         return;
+
+        //     //*Base our current speed based on an interpolation between move and sprint speed values
+        //     speedTimeBuffer = Mathf.Clamp01(speedTimeBuffer + (sprinting.ToSign() * sprint_accelerationRate * Time.deltaTime));
+        //     float current_speed = Mathf.Lerp(moveSpeed, sprintSpeed, speedTimeBuffer);
+
+        //     //*Adjust our movement to compensate for any slopes we may be on
+        //     Vector3 normal = transform.up;
+        //     // if (pb.GroundCast(out groundHitInfo))
+        //     //     normal = groundHitInfo.normal;
+
+        //     //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
+        //     Transform transformSource = projectionRelativeTransform ? projectionRelativeTransform : transform;
+        //     Vector3 forward = Vector3.ProjectOnPlane(transformSource.forward, normal).normalized;
+        //     Vector3 right = Vector3.ProjectOnPlane(transformSource.right, normal).normalized;
+
+        //     //*Apply our movement values
+        //     Vector3 moveDirection = forward * inputBuffer.y + right * inputBuffer.x;
+        //     if (sprinting)
+        //         moveDirection = moveDirection.normalized;
+
+        //     //*Move in direction * speed (velocity)
+        //     pb.Move(moveDirection * current_speed);
+        // }
 
         #endregion
 

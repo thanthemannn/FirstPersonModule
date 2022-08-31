@@ -28,10 +28,14 @@ namespace Than.Physics3D
         public bool isGrounded => buffer_isGrounded;
         bool buffer_isGrounded;
 
-        public Vector3 velocity { get; set; }
-        public Vector3 slideVelocity { get; private set; }
-        public Vector3 manualMovement { get; private set; }
-        public Vector3 impulseForces { get; private set; }
+        public Vector3 velocity { get { return rb.velocity; } set { rb.velocity = value; } }
+        public Vector3 RelativeVelocity { get { return transform.InverseTransformDirection(rb.velocity); } set { rb.velocity = transform.InverseTransformDirection(value); } }
+        Vector3 slideVelocity;
+        Vector3 slideVelocity_lastFixedUpdate;
+        Vector3 manualMovement;
+        public Vector3 manualMovement_lastFixedUpdate { get; private set; }
+        Vector3 impulseForces;
+        Vector3 impulseForces_lastFixedUpdate;
         public float current_gravityScale { get; private set; }
 
 
@@ -43,7 +47,7 @@ namespace Than.Physics3D
         Vector3 buffer_moveStep;
 
         public float Current_GroundSpeedLimit => buffer_groundSpeedLimit;
-        public float Current_AirSpeedLimit => Mathf.Min(buffer_airSpeedLimit, Mathf.Max(buffer_groundSpeedLimit, lastGroundManualMovement.magnitude));
+        public float Current_AirSpeedLimit => Mathf.Min(buffer_airSpeedLimit, Mathf.Max(buffer_groundSpeedLimit, manualMovement_lastFixedUpdate.magnitude));
         float buffer_groundSpeedLimit = Mathf.Infinity;
         float buffer_airSpeedLimit = Mathf.Infinity;
 
@@ -132,7 +136,8 @@ namespace Than.Physics3D
         /// </summary>
         public void AddForce(Vector3 force)
         {
-            velocity += force;
+            rb.AddForce(force, ForceMode.VelocityChange);
+            //velocity += force;
         }
 
         //* Aerial movement should carry the momentum we've taken with us from the ground, but also be limited to whatever airSpeedLimit we might set for it
@@ -149,6 +154,7 @@ namespace Than.Physics3D
         {
             buffer_descent_gravityScale = descent;
             buffer_ascent_gravityScale = ascent;
+            buffer_clearGravityThisFrame = false;
         }
 
         #endregion
@@ -162,6 +168,15 @@ namespace Than.Physics3D
             {
                 hitInfo = cached_groundCastHitInfo;
                 return cached_groundCastHitResult;
+            }
+
+            //* Ignore if we are at a strong y velocity upwards
+            if (RelativeVelocity.y > stickToGroundForce)
+            {
+                hitInfo = default(RaycastHit);
+                cached_groundCastHitInfo = hitInfo;
+                cached_groundCastHitResult = false;
+                return false;
             }
 
             cached_groundcastTime = Time.time;
@@ -241,68 +256,109 @@ namespace Than.Physics3D
             attachedCollider_len = attachedColliders.Length;
         }
 
-        Vector3 rbMoveStep;
-        void LateUpdate()
+        //Vector3 rbMoveStep;
+        // void LateUpdate()
+        // {
+        //     bool groundCast = GroundCast(out cached_groundCastHitInfo);
+
+        //     //* Clamp manual movement to our determined limits
+        //     lastManualMovement_UnclampedLimit = manualMovement;
+        //     manualMovement = Vector3.ClampMagnitude(manualMovement, isGrounded ? Current_GroundSpeedLimit : Current_AirSpeedLimit);
+
+        //     velocity += UpdateGravityCalculation();
+
+        //     //* Ensures that we don't apply too much velocity against an object to break through it or cause other glitches
+        //     //if (characterController.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
+        //     //if (capsuleCollider.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
+        //     if (rb.SweepTest(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime))
+        //     {
+        //         velocity = Vector3.ClampMagnitude(velocity, velocityCast_allocation.distance);
+        //     }
+
+        //     UpdateSlideVelocity(groundCast);
+
+        //     //*Add all of this frames forces together to get our moveStep
+        //     buffer_moveStep = velocity + slideVelocity + manualMovement + impulseForces;
+
+        //     //* Allows us to tweak this step a bit more within the function without affecting our public property LastMoveStep
+        //     rbMoveStep = buffer_moveStep;
+
+        //     //*Avoid bumpy movement when running / moving down slopes
+        //     //*Needs to be well on ground (with groundCast), not moving upwards, not sliding, and on some sort of slope
+        //     Vector3 localMoveStep = transform.InverseTransformDirection(rbMoveStep);
+        //     //Debug.Log(rbMoveStep + " | " + localMoveStep + " | " + transform.TransformDirection(localMoveStep));
+        //     if (groundCast && localMoveStep.y <= 0 && slideVelocity.sqrMagnitude < 1 && cached_groundCastHitInfo.normal != transform.up)
+        //     {
+        //         // localMoveStep.y = -buffer_moveStep.magnitude;
+        //         // rbMoveStep = transform.TransformDirection(localMoveStep);
+        //     }
+        //     //TODO this is breaking our sphere movement ^^^
+        //     //internalMovement.y = -buffer_moveStep.magnitude;
+
+        //     //*Apply character movement and drag
+        //     //characterController.Move(internalMovement * Time.deltaTime);
+        //     //rb.MovePosition(rb.position + internalMovement * Time.deltaTime);
+        //     velocity = ApplyDrag(velocity, drag);
+
+        //     //*Saves our last movebuffer for various uses
+        //     if (isGrounded)
+        //         lastGroundManualMovement = manualMovement;
+        //     else
+        //         lastAirManualMovement = manualMovement;
+        //     lastManualMovement = manualMovement;
+
+        //     //* Reset temporary values / forces
+        //     manualMovement = impulseForces = Vector3.zero;
+        //     buffer_airSpeedLimit = buffer_groundSpeedLimit = Mathf.Infinity;
+        //     GroundBufferUpdate();
+        // }
+
+        public float stickToGroundForce = 2;
+        void Update()
         {
             bool groundCast = GroundCast(out cached_groundCastHitInfo);
 
-            //* Clamp manual movement to our determined limits
-            lastManualMovement_UnclampedLimit = manualMovement;
-            manualMovement = Vector3.ClampMagnitude(manualMovement, isGrounded ? Current_GroundSpeedLimit : Current_AirSpeedLimit);
+            GravityScaleUpdate();
 
-            velocity += UpdateGravityCalculation();
-
-            //* Ensures that we don't apply too much velocity against an object to break through it or cause other glitches
-            //if (characterController.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
-            //if (capsuleCollider.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
-            if (rb.SweepTest(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime))
+            if (groundCast)
             {
-                velocity = Vector3.ClampMagnitude(velocity, velocityCast_allocation.distance);
+                rb.AddForce(-cached_groundCastHitInfo.normal * stickToGroundForce, ForceMode.VelocityChange);//-transform.up * stickToGroundForce, ForceMode.VelocityChange);
             }
 
-            UpdateSlideVelocity(groundCast);
+            //TODO UpdateSlideVelocity(groundCast);
 
-            //*Add all of this frames forces together to get our moveStep
-            buffer_moveStep = velocity + slideVelocity + manualMovement + impulseForces;
-
-            //* Allows us to tweak this step a bit more within the function without affecting our public property LastMoveStep
-            rbMoveStep = buffer_moveStep;
-
-            //*Avoid bumpy movement when running / moving down slopes
-            //*Needs to be well on ground (with groundCast), not moving upwards, not sliding, and on some sort of slope
-            Vector3 localMoveStep = transform.InverseTransformDirection(rbMoveStep);
-            //Debug.Log(rbMoveStep + " | " + localMoveStep + " | " + transform.TransformDirection(localMoveStep));
-            if (groundCast && localMoveStep.y <= 0 && slideVelocity.sqrMagnitude < 1 && cached_groundCastHitInfo.normal != transform.up)
-            {
-                // localMoveStep.y = -buffer_moveStep.magnitude;
-                // rbMoveStep = transform.TransformDirection(localMoveStep);
-            }
-            //TODO this is breaking our sphere movement ^^^
-            //internalMovement.y = -buffer_moveStep.magnitude;
-
-            //*Apply character movement and drag
-            //characterController.Move(internalMovement * Time.deltaTime);
-            //rb.MovePosition(rb.position + internalMovement * Time.deltaTime);
-            velocity = ApplyDrag(velocity, drag);
-
-            //*Saves our last movebuffer for various uses
-            if (isGrounded)
-                lastGroundManualMovement = manualMovement;
-            else
-                lastAirManualMovement = manualMovement;
-            lastManualMovement = manualMovement;
-
-            //* Reset temporary values / forces
-            manualMovement = impulseForces = Vector3.zero;
-            buffer_airSpeedLimit = buffer_groundSpeedLimit = Mathf.Infinity;
             GroundBufferUpdate();
+
+            manualMovement -= manualMovement_lastFixedUpdate;
+            if (manualMovement.sqrMagnitude < .01f)
+                manualMovement = Vector3.zero;
+
+            impulseForces -= impulseForces_lastFixedUpdate;
+            if (impulseForces.sqrMagnitude < .01f)
+                impulseForces = Vector3.zero;
+
+            slideVelocity -= slideVelocity_lastFixedUpdate;
+            if (slideVelocity.sqrMagnitude < .01f)
+                slideVelocity = Vector3.zero;
+
+            buffer_airSpeedLimit = buffer_groundSpeedLimit = Mathf.Infinity;
         }
 
+
+        public const float gravitationalConstant = 0.0001f;
         void FixedUpdate()
         {
+            Vector3 acceleration = GravityDirection * Physics.gravity.y * current_gravityScale;//* body.mass / sqrDst;
+            rb.AddForce(acceleration, ForceMode.Acceleration);
+
             rb.MoveRotation(Quaternion.FromToRotation(transform.up, GravityDirection) * rb.rotation);
 
-            rb.MovePosition(rb.position + rbMoveStep * Time.fixedDeltaTime);
+            buffer_moveStep = manualMovement + impulseForces + slideVelocity;
+            rb.MovePosition(rb.position + (buffer_moveStep) * Time.fixedDeltaTime);
+
+            manualMovement_lastFixedUpdate = manualMovement;
+            impulseForces_lastFixedUpdate = impulseForces;
+            slideVelocity_lastFixedUpdate = slideVelocity;
         }
 
 
@@ -320,24 +376,41 @@ namespace Than.Physics3D
             }
         }
 
-        Vector3 UpdateGravityCalculation()
+        bool buffer_clearGravityThisFrame = true;
+        void GravityScaleUpdate()
         {
-            Vector3 gravity = Vector3.zero;
             current_gravityScale = 0;
             if (!isGroundedRaw)
+                current_gravityScale = RelativeVelocity.y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
+
+
+            if (buffer_clearGravityThisFrame)
             {
-                //* Apply gravity. Gravity is multiplied by deltaTime twice (once here, once when used in velocity with our final MovePosition())
-                //* This is because gravity should be applied as an acceleration (ms^-2)
-                current_gravityScale = transform.InverseTransformPoint(velocity).y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
-                gravity = GravityDirection * Physics.gravity.y * current_gravityScale * Time.deltaTime;
+                //*Reset gravity buffers
+                buffer_descent_gravityScale = descent_gravityScale;
+                buffer_ascent_gravityScale = ascent_gravityScale;
             }
-
-            //*Reset gravity buffers
-            buffer_descent_gravityScale = descent_gravityScale;
-            buffer_ascent_gravityScale = ascent_gravityScale;
-
-            return gravity;
+            buffer_clearGravityThisFrame = true;
         }
+
+        // Vector3 UpdateGravityCalculation()
+        // {
+        //     Vector3 gravity = Vector3.zero;
+        //     current_gravityScale = 0;
+        //     if (!isGroundedRaw)
+        //     {
+        //         //* Apply gravity. Gravity is multiplied by deltaTime twice (once here, once when used in velocity with our final MovePosition())
+        //         //* This is because gravity should be applied as an acceleration (ms^-2)
+        //         current_gravityScale = transform.InverseTransformPoint(velocity).y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
+        //         gravity = GravityDirection * Physics.gravity.y * current_gravityScale * Time.deltaTime;
+        //     }
+
+        //     //*Reset gravity buffers
+        //     buffer_descent_gravityScale = descent_gravityScale;
+        //     buffer_ascent_gravityScale = ascent_gravityScale;
+
+        //     return gravity;
+        // }
 
         void UpdateSlideVelocity(bool groundCastHit)
         {
