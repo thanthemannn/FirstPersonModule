@@ -255,6 +255,30 @@ public static class Extensible
         return Physics.CapsuleCast(pos - offset, pos + offset, controller.radius, direction, out hitInfo, maxDistance, layerMask);
     }
 
+
+
+    #endregion
+
+    #region Collider
+
+    public static bool Cast(this CapsuleCollider collider, Vector3 direction, out RaycastHit hitInfo, float maxDistance)
+    {
+        return collider.Cast(direction, out hitInfo, maxDistance, ~0);
+    }
+
+    public static bool Cast(this CapsuleCollider collider, Vector3 direction, out RaycastHit hitInfo, float maxDistance, LayerMask layerMask)
+    {
+        Vector3 offsetDir = collider.transform.up;
+        if (collider.direction == 0)
+            offsetDir = collider.transform.right;
+        else if (collider.direction == 2)
+            offsetDir = collider.transform.forward;
+
+        Vector3 pos = collider.transform.position + collider.center;
+        Vector3 offset = offsetDir * (collider.height * .5f - collider.radius);
+        return Physics.CapsuleCast(pos - offset, pos + offset, collider.radius, direction, out hitInfo, maxDistance, layerMask);
+    }
+
     #endregion
 
     #region Transform

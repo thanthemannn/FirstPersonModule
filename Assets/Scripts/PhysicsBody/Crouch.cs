@@ -102,7 +102,7 @@ namespace Than.Physics3D
 
         void Start()
         {
-            affectedCharacterController = new CrouchCollider(pb.characterController);
+            affectedCharacterController = new CrouchCollider(pb.capsuleCollider);
             affectedCharacterController.crouchedHeight = characterControllerCrouchedHeight;
             len_affectedColliders = affectedColliders.Length;
             for (int i = 0; i < len_affectedColliders; i++)
@@ -170,11 +170,11 @@ namespace Than.Physics3D
 
         bool CheckHeadspaceObstructed()
         {
-            Vector3 center = pb.characterController.center;
+            Vector3 center = pb.capsuleCollider.center;
             center.y = affectedCharacterController.defaultCenterY;
             Vector3 pos = transform.position + center;
-            Vector3 offset = Vector3.up * (affectedCharacterController.defaultHeight * .5f - pb.characterController.radius);
-            int collisionSize = Physics.OverlapSphereNonAlloc(pos + offset, pb.characterController.radius, headSpaceObstructions, pb.layerMask);
+            Vector3 offset = Vector3.up * (affectedCharacterController.defaultHeight * .5f - pb.capsuleCollider.radius);
+            int collisionSize = Physics.OverlapSphereNonAlloc(pos + offset, pb.capsuleCollider.radius, headSpaceObstructions, pb.layerMask);
 
             for (int i = 0; i < collisionSize; i++)
             {

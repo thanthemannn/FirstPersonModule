@@ -9,15 +9,22 @@ using UnityEngine;
 namespace Than.Physics3D
 {
     [DefaultExecutionOrder(5)]
-    [RequireComponent(typeof(CharacterController))]
+    [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(CapsuleCollider))]
     public class PhysicsBody : MonoBehaviour
     {
         #region Public Properties and Events
+        public Transform sphereTest;
+        public float sphereMultiplier = -1;
+        //public CharacterController characterController { get; private set; }
 
-        public CharacterController characterController { get; private set; }
+        public float slopeLimit = 30;//=> characterController.slopeLimit;
+
+        public Rigidbody rb { get; private set; }
+        public CapsuleCollider capsuleCollider { get; private set; }
         public LayerMask layerMask { get; private set; }
 
-        public bool isGroundedRaw => characterController.isGrounded;
+        public bool isGroundedRaw => GroundCast(out cached_groundCastHitInfo);//Physics.Raycast(transform.position, -transform.up, 1.1f, layerMask);//characterController.isGrounded;
         public bool isGrounded => buffer_isGrounded;
         bool buffer_isGrounded;
 
@@ -77,8 +84,8 @@ namespace Than.Physics3D
         [Min(0)] public float groundCoyoteTime = .2f;
         float current_groundCoyoteTime = 0;
 
-        [Tooltip("For collecting data on the surface the body is standing on. Will only be cast if we are determining that the ground is already touched in some way.")]
-        [Space(10)][SerializeField][Min(0)] float groundCastDistance = 1;
+        [Tooltip("For collecting data on the surface the body is standing on.")]
+        [Space(10)][SerializeField][Min(0)] float groundCastDistance = .1f;
         [Tooltip("Determines the frequency of ground casts within a slim radius around the body. The lower the value the higher the definition of surrounding casts.")]
         [SerializeField][Range(1, 360)] float groundDegreeCastStep = 22.5f;
 
@@ -87,9 +94,9 @@ namespace Than.Physics3D
         #region Other Properties and Varibles
 
         //*Ground cast properties
-        Vector3 CastCenter => transform.position + characterController.center;
-        float CastDistance => characterController.height * .5f + groundCastDistance;
-        Vector3 DegreeCastPush => transform.forward * characterController.radius * .5f;
+        Vector3 CastCenter => transform.position + capsuleCollider.center; //transform.position + characterController.center;
+        float CastDistance => capsuleCollider.height * .5f + groundCastDistance;//characterController.height * .5f + groundCastDistance;
+        Vector3 DegreeCastPush => transform.forward * capsuleCollider.radius * .5f;//transform.forward * characterController.radius * .5f;
 
         //*Ground cast cached data
         [HideInInspector] public RaycastHit cached_groundCastHitInfo;
@@ -158,19 +165,20 @@ namespace Than.Physics3D
             }
 
             cached_groundcastTime = Time.time;
-            if (!isGroundedRaw)
-            {
-                hitInfo = default(RaycastHit);
-                cached_groundCastHitInfo = hitInfo;
-                cached_groundCastHitResult = false;
-                return false;
-            }
+            // if (!isGroundedRaw)
+            // {
+            //     hitInfo = default(RaycastHit);
+            //     cached_groundCastHitInfo = hitInfo;
+            //     cached_groundCastHitResult = false;
+            //     return false;
+            // }
 
             Vector3 pos = CastCenter;
             float dist = CastDistance;
 
             //*Try a simple linecast from the center first
-            if (Physics.Raycast(pos, Vector3.down, out hitInfo, dist, layerMask))
+            Vector3 down = -transform.up;
+            if (Physics.Raycast(pos, down, out hitInfo, dist, layerMask))
             {
                 cached_groundCastHitResult = true;
                 cached_groundCastHitInfo = hitInfo;
@@ -182,7 +190,7 @@ namespace Than.Physics3D
             for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
             {
                 Vector3 degreePos = Quaternion.Euler(0, deg, 0) * push;
-                if (Physics.Raycast(pos + degreePos, Vector3.down, out hitInfo, dist, layerMask))
+                if (Physics.Raycast(pos + degreePos, down, out hitInfo, dist, layerMask))
                 {
                     cached_groundCastHitResult = true;
                     cached_groundCastHitInfo = hitInfo;
@@ -195,10 +203,10 @@ namespace Than.Physics3D
             return false;
         }
 
-        public bool IsNormalSlidable(Vector3 normal) => IsNormalSlidable(normal, characterController.slopeLimit);
-        public static bool IsNormalSlidable(Vector3 normal, float minAngle)
+        public bool IsNormalSlidable(Vector3 normal) => IsNormalSlidable(normal, transform.up, slopeLimit);
+        public static bool IsNormalSlidable(Vector3 normal, Vector3 up, float minAngle)
         {
-            float slopeAngle = Vector3.Angle(normal, Vector3.up);
+            float slopeAngle = Vector3.Angle(normal, up);
             return slopeAngle > minAngle;
         }
 
@@ -211,9 +219,9 @@ namespace Than.Physics3D
             return velocityVector;
         }
 
-        public static Vector3 GetSlopeForceFromNormal(Vector3 normal, float baseSpeed)
+        public static Vector3 GetSlopeForceFromNormal(Vector3 normal, Vector3 up, float baseSpeed)
         {
-            return (Vector3.up - normal * Vector3.Dot(Vector3.up, normal)) * -baseSpeed;
+            return (up - normal * Vector3.Dot(up, normal)) * -baseSpeed;
         }
 
         #endregion
@@ -224,13 +232,16 @@ namespace Than.Physics3D
         {
             buffer_descent_gravityScale = descent_gravityScale;
             buffer_ascent_gravityScale = ascent_gravityScale;
-            characterController = GetComponent<CharacterController>();
+            //characterController = GetComponent<CharacterController>();
+            rb = GetComponent<Rigidbody>();
+            capsuleCollider = GetComponent<CapsuleCollider>();
             layerMask = gameObject.layer.GetLayerMaskFromCollisionMatrix();
 
-            attachedColliders = characterController.GetComponentsInChildren<Collider>();
+            attachedColliders = rb.GetComponentsInChildren<Collider>();//characterController.GetComponentsInChildren<Collider>();
             attachedCollider_len = attachedColliders.Length;
         }
 
+        Vector3 rbMoveStep;
         void LateUpdate()
         {
             bool groundCast = GroundCast(out cached_groundCastHitInfo);
@@ -242,7 +253,9 @@ namespace Than.Physics3D
             velocity += UpdateGravityCalculation();
 
             //* Ensures that we don't apply too much velocity against an object to break through it or cause other glitches
-            if (characterController.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
+            //if (characterController.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
+            //if (capsuleCollider.Cast(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime, layerMask))
+            if (rb.SweepTest(velocity.normalized, out velocityCast_allocation, velocity.magnitude * Time.deltaTime))
             {
                 velocity = Vector3.ClampMagnitude(velocity, velocityCast_allocation.distance);
             }
@@ -253,15 +266,23 @@ namespace Than.Physics3D
             buffer_moveStep = velocity + slideVelocity + manualMovement + impulseForces;
 
             //* Allows us to tweak this step a bit more within the function without affecting our public property LastMoveStep
-            Vector3 internalMovement = buffer_moveStep;
+            rbMoveStep = buffer_moveStep;
 
             //*Avoid bumpy movement when running / moving down slopes
             //*Needs to be well on ground (with groundCast), not moving upwards, not sliding, and on some sort of slope
-            if (groundCast && buffer_moveStep.y <= 0 && slideVelocity.sqrMagnitude < 1 && cached_groundCastHitInfo.normal != transform.up)
-                internalMovement.y = -buffer_moveStep.magnitude;
+            Vector3 localMoveStep = transform.InverseTransformDirection(rbMoveStep);
+            //Debug.Log(rbMoveStep + " | " + localMoveStep + " | " + transform.TransformDirection(localMoveStep));
+            if (groundCast && localMoveStep.y <= 0 && slideVelocity.sqrMagnitude < 1 && cached_groundCastHitInfo.normal != transform.up)
+            {
+                // localMoveStep.y = -buffer_moveStep.magnitude;
+                // rbMoveStep = transform.TransformDirection(localMoveStep);
+            }
+            //TODO this is breaking our sphere movement ^^^
+            //internalMovement.y = -buffer_moveStep.magnitude;
 
             //*Apply character movement and drag
-            characterController.Move(internalMovement * Time.deltaTime);
+            //characterController.Move(internalMovement * Time.deltaTime);
+            //rb.MovePosition(rb.position + internalMovement * Time.deltaTime);
             velocity = ApplyDrag(velocity, drag);
 
             //*Saves our last movebuffer for various uses
@@ -277,9 +298,27 @@ namespace Than.Physics3D
             GroundBufferUpdate();
         }
 
+        void FixedUpdate()
+        {
+            rb.MoveRotation(Quaternion.FromToRotation(transform.up, GravityDirection) * rb.rotation);
+
+            rb.MovePosition(rb.position + rbMoveStep * Time.fixedDeltaTime);
+        }
+
+
         #endregion
 
         #region Physics Updates
+
+        Vector3 GravityDirection
+        {
+            get
+            {
+                Vector3 directionTowardsSphere = (transform.position - sphereTest.position).normalized * sphereMultiplier;
+
+                return directionTowardsSphere;
+            }
+        }
 
         Vector3 UpdateGravityCalculation()
         {
@@ -287,10 +326,10 @@ namespace Than.Physics3D
             current_gravityScale = 0;
             if (!isGroundedRaw)
             {
-                //* Apply gravity. Gravity is multiplied by deltaTime twice (once here, once when used in velocity with characterController.Move())
+                //* Apply gravity. Gravity is multiplied by deltaTime twice (once here, once when used in velocity with our final MovePosition())
                 //* This is because gravity should be applied as an acceleration (ms^-2)
-                current_gravityScale = velocity.y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
-                gravity = Physics.gravity * current_gravityScale * Time.deltaTime;
+                current_gravityScale = transform.InverseTransformPoint(velocity).y > 0 ? buffer_ascent_gravityScale : buffer_descent_gravityScale;
+                gravity = GravityDirection * Physics.gravity.y * current_gravityScale * Time.deltaTime;
             }
 
             //*Reset gravity buffers
@@ -307,7 +346,7 @@ namespace Than.Physics3D
 
             //* Keep us at the peak of our slide while we are still on the slope
             if (onSlope)
-                slideVelocity = GetSlopeForceFromNormal(cached_groundCastHitInfo.normal, slideSpeed);
+                slideVelocity = GetSlopeForceFromNormal(cached_groundCastHitInfo.normal, transform.up, slideSpeed);
 
             //* Limits our move speed while we are sliding and attempting to move against it
             if (Vector3.Dot(manualMovement, slideVelocity) < -slideVelocity.magnitude * .5f)
@@ -394,10 +433,11 @@ namespace Than.Physics3D
             Vector3 pos = CastCenter;
             float dist = CastDistance;
             Vector3 push = DegreeCastPush;
+            Vector3 down = -transform.up;
             for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
             {
                 Vector3 degreePos = Quaternion.Euler(0, deg, 0) * push;
-                Debug.DrawRay(pos + degreePos, Vector3.down * dist, Color.yellow);
+                Debug.DrawRay(pos + degreePos, down * dist, isGroundedRaw ? Color.yellow : Color.red);
             }
         }
 #endif

@@ -98,7 +98,7 @@ namespace Than.Physics3D
             if (pb.velocity.y < 0)
                 pb.velocity = new Vector3(pb.velocity.x, 0, pb.velocity.z);
 
-            Vector3 forceDir = Vector3.up;
+            Vector3 forceDir = transform.up;
 
             //* If we are on the ground and sliding, make our jump direction the normal of the surface we are sliding on
             if (pb.GroundCast(out jumpGroundCast) && pb.IsNormalSlidable(jumpGroundCast.normal))

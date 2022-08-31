@@ -52,7 +52,7 @@ namespace Than
             headDirection.x = Mathf.Clamp(headDirection.x % 360, -yAxisClamp, yAxisClamp);
             headDirection.y += lookDirection.x;
 
-            transform.eulerAngles = new Vector3(transform.eulerAngles.z, headDirection.y, transform.eulerAngles.z);
+            transform.Rotate(Vector3.up * lookDirection.x);//eulerAngles = new Vector3(transform.eulerAngles.z, headDirection.y, transform.eulerAngles.z);
             head.localEulerAngles = new Vector3(headDirection.x, 0, 0);
         }
 

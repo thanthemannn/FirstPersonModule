@@ -144,8 +144,8 @@ namespace Than.Physics3D
 
             //*Adjust our movement to compensate for any slopes we may be on
             Vector3 normal = transform.up;
-            if (pb.GroundCast(out groundHitInfo))
-                normal = groundHitInfo.normal;
+            // if (pb.GroundCast(out groundHitInfo))
+            //     normal = groundHitInfo.normal;
 
             //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
             Transform transformSource = projectionRelativeTransform ? projectionRelativeTransform : transform;
@@ -220,7 +220,7 @@ namespace Than.Physics3D
         {
             if (projectionRelativeTransform)
             {
-                Vector3 normal = Vector3.up;
+                Vector3 normal = transform.up;
                 Vector3 forward = Vector3.ProjectOnPlane(projectionRelativeTransform.forward, normal).normalized;
                 Vector3 pf = transform.position + forward * gizmos_projectionMultiplier;
                 Gizmos.color = Color.blue;

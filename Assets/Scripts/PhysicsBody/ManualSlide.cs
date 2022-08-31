@@ -66,7 +66,7 @@ namespace Than.Physics3D
                 Slide(true);
         }
 
-        bool SlopeCheck() => (pb.GroundCast(out groundCastHitInfo) && PhysicsBody.IsNormalSlidable(groundCastHitInfo.normal, minSlopeAngle));
+        bool SlopeCheck() => (pb.GroundCast(out groundCastHitInfo) && PhysicsBody.IsNormalSlidable(groundCastHitInfo.normal, transform.up, minSlopeAngle));
 
         #endregion
 
@@ -89,7 +89,7 @@ namespace Than.Physics3D
             //* Add speed of our slidable slope if relevant
             bool onSlideableSlope = SlopeCheck();
             if (onSlideableSlope)
-                v += PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, speedOnSlope);
+                v += PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, transform.up, speedOnSlope);
 
             //* Manual slides are permitted if we are moving fast enough OR are on a slope with a strong enough angle
             if (onSlideableSlope || v.magnitude >= minVelocityForSlide)
@@ -113,7 +113,7 @@ namespace Than.Physics3D
                 //* We use movetowards here as we may have started the slide in a direction opposite to the slope
                 if (SlopeCheck())
                 {
-                    Vector3 slopeVelocity = PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, speedOnSlope);
+                    Vector3 slopeVelocity = PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, transform.up, speedOnSlope);
                     velocity = Vector3.MoveTowards(velocity, slopeVelocity, slopeVelocity.magnitude * 2 * Time.deltaTime);
                 }
             }
