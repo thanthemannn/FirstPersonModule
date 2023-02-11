@@ -8,14 +8,15 @@ using UnityEngine;
 
 namespace Than.Physics3D
 {
-    [DefaultExecutionOrder(5)]
+    [DefaultExecutionOrder(-8)]
     [RequireComponent(typeof(Rigidbody))]
     [RequireComponent(typeof(CapsuleCollider))]
     public class PhysicsBody : MonoBehaviour
     {
+        public float forwardMove = 1;
         #region Public Properties and Events
         public Transform sphereTest;
-        public float sphereMultiplier = -1;
+        public float sphereMultiplier = 1;
         //public CharacterController characterController { get; private set; }
 
         public float slopeLimit = 30;//=> characterController.slopeLimit;
@@ -32,22 +33,19 @@ namespace Than.Physics3D
         public Vector3 RelativeVelocity { get { return transform.InverseTransformDirection(rb.velocity); } set { rb.velocity = transform.InverseTransformDirection(value); } }
         Vector3 slideVelocity;
         Vector3 slideVelocity_lastFixedUpdate;
-        Vector3 manualMovement;
-        public Vector3 manualMovement_lastFixedUpdate { get; private set; }
-        Vector3 impulseForces;
-        Vector3 impulseForces_lastFixedUpdate;
+        public Vector3 LastControlledMovement => controlledMovement_lastFixedUpdate;
+        Vector3 controlledMovement;
+        Vector3 controlledMovement_lastFixedUpdate;
+        Vector3 unrestrictedMovement;
+        Vector3 unrestrictedMovement_lastFixedUpdate;
         public float current_gravityScale { get; private set; }
 
 
-        public Vector3 lastManualMovement_UnclampedLimit { get; private set; }
-        public Vector3 lastManualMovement { get; private set; }
-        public Vector3 lastGroundManualMovement { get; private set; }
-        public Vector3 lastAirManualMovement { get; private set; }
-        public Vector3 LastMoveStep { get { return buffer_moveStep; } }
-        Vector3 buffer_moveStep;
+        public Vector3 MoveStep { get { return fixedUpdate_moveStep / Time.fixedDeltaTime; } }
+        Vector3 fixedUpdate_moveStep;
 
         public float Current_GroundSpeedLimit => buffer_groundSpeedLimit;
-        public float Current_AirSpeedLimit => Mathf.Min(buffer_airSpeedLimit, Mathf.Max(buffer_groundSpeedLimit, manualMovement_lastFixedUpdate.magnitude));
+        public float Current_AirSpeedLimit => Mathf.Min(buffer_airSpeedLimit, Mathf.Max(buffer_groundSpeedLimit, LastControlledMovement.magnitude));
         float buffer_groundSpeedLimit = Mathf.Infinity;
         float buffer_airSpeedLimit = Mathf.Infinity;
 
@@ -89,7 +87,7 @@ namespace Than.Physics3D
         float current_groundCoyoteTime = 0;
 
         [Tooltip("For collecting data on the surface the body is standing on.")]
-        [Space(10)][SerializeField][Min(0)] float groundCastDistance = .1f;
+        [Space(10)][SerializeField][Min(0)] float groundCastDistance = .2f;
         [Tooltip("Determines the frequency of ground casts within a slim radius around the body. The lower the value the higher the definition of surrounding casts.")]
         [SerializeField][Range(1, 360)] float groundDegreeCastStep = 22.5f;
 
@@ -98,9 +96,9 @@ namespace Than.Physics3D
         #region Other Properties and Varibles
 
         //*Ground cast properties
-        Vector3 CastCenter => transform.position + capsuleCollider.center; //transform.position + characterController.center;
-        float CastDistance => capsuleCollider.height * .5f + groundCastDistance;//characterController.height * .5f + groundCastDistance;
-        Vector3 DegreeCastPush => transform.forward * capsuleCollider.radius * .5f;//transform.forward * characterController.radius * .5f;
+        Vector3 GroundCastCenter => transform.TransformPoint(capsuleCollider.center + Vector3.down * (capsuleCollider.height * .5f - GroundCastRadius));// * (capsuleCollider.height * .5f - capsuleCollider.radius); //transform.position + characterController.center;
+        //float CastDistance => capsuleCollider.height * .5f + groundCastDistance;//characterController.height * .5f + groundCastDistance;
+        float GroundCastRadius => capsuleCollider.radius * .666666f;//transform.forward * characterController.radius * .5f;
 
         //*Ground cast cached data
         [HideInInspector] public RaycastHit cached_groundCastHitInfo;
@@ -120,15 +118,15 @@ namespace Than.Physics3D
         /// </summary>
         public void Move(Vector3 movement)
         {
-            manualMovement += movement;
+            controlledMovement += movement;
         }
 
         /// <summary>
-        /// Applies a force that will be added to the object instantly. Impulse forces are cleared after use every frame.
+        /// Applies a manual movement value that will be added to the object instantly. Impulse forces are cleared after use every frame and are NOT limited by other scripts.
         /// </summary>
-        public void AddForceImpulse(Vector3 force)
+        public void MoveUnrestricted(Vector3 force)
         {
-            impulseForces += force;
+            unrestrictedMovement += force;
         }
 
         /// <summary>
@@ -188,30 +186,46 @@ namespace Than.Physics3D
             //     return false;
             // }
 
-            Vector3 pos = CastCenter;
-            float dist = CastDistance;
+            Vector3 pos = GroundCastCenter;
+            //float dist = CastDistance;
 
             //*Try a simple linecast from the center first
             Vector3 down = -transform.up;
-            if (Physics.Raycast(pos, down, out hitInfo, dist, layerMask))
+            // if (Physics.Raycast(pos, down, out hitInfo, dist, layerMask))
+            // {
+            //     cached_groundCastHitResult = true;
+            //     cached_groundCastHitInfo = hitInfo;
+            //     return true;
+            // }
+
+
+            if (Physics.SphereCast(pos, groundCastDistance, down, out hitInfo, groundCastDistance, layerMask))
             {
+                if (IsNormalSlidable(hitInfo.normal))
+                {
+                    hitInfo = default(RaycastHit);
+                    cached_groundCastHitInfo = hitInfo;
+                    cached_groundCastHitResult = false;
+                    return false;
+                }
                 cached_groundCastHitResult = true;
                 cached_groundCastHitInfo = hitInfo;
                 return true;
             }
 
             //* If the above didn't return a hit, check around the center just a little bit
-            Vector3 push = DegreeCastPush;
-            for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
-            {
-                Vector3 degreePos = Quaternion.Euler(0, deg, 0) * push;
-                if (Physics.Raycast(pos + degreePos, down, out hitInfo, dist, layerMask))
-                {
-                    cached_groundCastHitResult = true;
-                    cached_groundCastHitInfo = hitInfo;
-                    return true;
-                }
-            }
+            // float push = DegreeCastPush;
+            // for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
+            // {
+            //     Vector2 degVector2 = UMath.DegreeToVector2(deg);
+            //     Vector3 degreePos = transform.TransformDirection(new Vector3(degVector2.x, 0, degVector2.y)) * push;
+            //     if (Physics.Raycast(pos + degreePos, down, out hitInfo, dist, layerMask))
+            //     {
+            //         cached_groundCastHitResult = true;
+            //         cached_groundCastHitInfo = hitInfo;
+            //         return true;
+            //     }
+            // }
 
             cached_groundCastHitResult = false;
             cached_groundCastHitInfo = hitInfo;
@@ -314,7 +328,13 @@ namespace Than.Physics3D
         // }
 
         public float stickToGroundForce = 2;
-        void Update()
+        public const float gravitationalConstant = 0.0001f;
+
+        public float collisionDetectionEpsilon = .1f;
+
+        Vector3 lastRayPos = Vector3.zero;
+        Vector3 lastRayDir = Vector3.zero;
+        void FixedUpdate()
         {
             bool groundCast = GroundCast(out cached_groundCastHitInfo);
 
@@ -325,40 +345,40 @@ namespace Than.Physics3D
                 rb.AddForce(-cached_groundCastHitInfo.normal * stickToGroundForce, ForceMode.VelocityChange);//-transform.up * stickToGroundForce, ForceMode.VelocityChange);
             }
 
-            //TODO UpdateSlideVelocity(groundCast);
+            //*Gravity
+            Vector3 acceleration = GravityDirection * -Physics.gravity.y * current_gravityScale;
+            rb.AddForce(acceleration, ForceMode.Acceleration);
+            //*Align to gravity
+            rb.MoveRotation(Quaternion.FromToRotation(transform.up, -GravityDirection) * rb.rotation);
 
-            GroundBufferUpdate();
+            //*Movement forces
+            fixedUpdate_moveStep = controlledMovement + unrestrictedMovement;// + (slideVelocity * Time.fixedDeltaTime);
 
-            manualMovement -= manualMovement_lastFixedUpdate;
-            if (manualMovement.sqrMagnitude < .01f)
-                manualMovement = Vector3.zero;
+            //* Collision detection using our capsule
+            Vector3 moveStepDir = fixedUpdate_moveStep.normalized;
+            Vector3 pos = rb.position + capsuleCollider.center;
+            Vector3 offset = capsuleCollider.transform.up * (capsuleCollider.height * .5f - capsuleCollider.radius);
+            //* Recede the cast capsule by epsilon and increase the check distance by epsilon to equal it out. This allows for collision detection slightly "inside the skin" of our collider
+            if (Physics.CapsuleCast(pos - offset, pos + offset, capsuleCollider.radius - collisionDetectionEpsilon, moveStepDir, out RaycastHit hitInfo, fixedUpdate_moveStep.magnitude + collisionDetectionEpsilon))
+            {
+                //*Shorten our movement step to account for the collision
+                fixedUpdate_moveStep = moveStepDir * (hitInfo.distance - collisionDetectionEpsilon);//(Vector3.Dot(hitInfo.point - rb.position, moveStepDir) - capsuleCollider.radius);
+                lastRayPos = pos;
+                lastRayDir = fixedUpdate_moveStep;
+            }
 
-            impulseForces -= impulseForces_lastFixedUpdate;
-            if (impulseForces.sqrMagnitude < .01f)
-                impulseForces = Vector3.zero;
+            rb.MovePosition(rb.position + fixedUpdate_moveStep);
 
-            slideVelocity -= slideVelocity_lastFixedUpdate;
-            if (slideVelocity.sqrMagnitude < .01f)
-                slideVelocity = Vector3.zero;
+            GroundBufferUpdate(Time.fixedDeltaTime);
 
             buffer_airSpeedLimit = buffer_groundSpeedLimit = Mathf.Infinity;
-        }
 
-
-        public const float gravitationalConstant = 0.0001f;
-        void FixedUpdate()
-        {
-            Vector3 acceleration = GravityDirection * Physics.gravity.y * current_gravityScale;//* body.mass / sqrDst;
-            rb.AddForce(acceleration, ForceMode.Acceleration);
-
-            rb.MoveRotation(Quaternion.FromToRotation(transform.up, GravityDirection) * rb.rotation);
-
-            buffer_moveStep = manualMovement + impulseForces + slideVelocity;
-            rb.MovePosition(rb.position + (buffer_moveStep) * Time.fixedDeltaTime);
-
-            manualMovement_lastFixedUpdate = manualMovement;
-            impulseForces_lastFixedUpdate = impulseForces;
+            controlledMovement_lastFixedUpdate = controlledMovement / Time.fixedDeltaTime;
+            unrestrictedMovement_lastFixedUpdate = unrestrictedMovement / Time.fixedDeltaTime;
             slideVelocity_lastFixedUpdate = slideVelocity;
+
+            controlledMovement = Vector3.zero;
+            unrestrictedMovement = Vector3.zero;
         }
 
 
@@ -370,9 +390,17 @@ namespace Than.Physics3D
         {
             get
             {
-                Vector3 directionTowardsSphere = (transform.position - sphereTest.position).normalized * sphereMultiplier;
+                if (sphereTest)
+                {
+                    Vector3 directionTowardsSphere = (transform.position - sphereTest.position).normalized * sphereMultiplier;
 
-                return directionTowardsSphere;
+                    return directionTowardsSphere;
+                }
+                else
+                {
+                    return Vector3.down;
+                }
+
             }
         }
 
@@ -422,9 +450,9 @@ namespace Than.Physics3D
                 slideVelocity = GetSlopeForceFromNormal(cached_groundCastHitInfo.normal, transform.up, slideSpeed);
 
             //* Limits our move speed while we are sliding and attempting to move against it
-            if (Vector3.Dot(manualMovement, slideVelocity) < -slideVelocity.magnitude * .5f)
+            if (Vector3.Dot(controlledMovement, slideVelocity) < -slideVelocity.magnitude * .5f)
             {
-                manualMovement = Vector3.ClampMagnitude(manualMovement, manualMoveLimitWhileSliding);
+                controlledMovement = Vector3.ClampMagnitude(controlledMovement, manualMoveLimitWhileSliding);
             }
             //* Increase drag if we are moving after the slide
             else if (!onSlope && groundCastHit)
@@ -435,7 +463,7 @@ namespace Than.Physics3D
             slideVelocity = ApplyDrag(slideVelocity, drag);
         }
 
-        void GroundBufferUpdate()
+        void GroundBufferUpdate(float deltaTime)
         {
             bool groundedThisFrame = isGroundedRaw;
             if (groundedThisFrame != buffer_isGrounded)
@@ -448,7 +476,7 @@ namespace Than.Physics3D
                     current_groundCoyoteTime = 0;
                 }
                 else
-                    current_groundCoyoteTime += Time.deltaTime;
+                    current_groundCoyoteTime += deltaTime;
             }
             else
                 current_groundCoyoteTime = 0;
@@ -468,6 +496,9 @@ namespace Than.Physics3D
         {
             if (!Application.isPlaying)
                 return;
+
+            Gizmos.color = new Color(1, .5f, 0);
+            Gizmos.DrawRay(lastRayPos, lastRayDir);
 
             if (isGrounded)
             {
@@ -503,15 +534,21 @@ namespace Than.Physics3D
             }
 
 
-            Vector3 pos = CastCenter;
-            float dist = CastDistance;
-            Vector3 push = DegreeCastPush;
+            Vector3 pos = GroundCastCenter;
+            //float dist = CastDistance;
+            float radius = GroundCastRadius;
             Vector3 down = -transform.up;
-            for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
-            {
-                Vector3 degreePos = Quaternion.Euler(0, deg, 0) * push;
-                Debug.DrawRay(pos + degreePos, down * dist, isGroundedRaw ? Color.yellow : Color.red);
-            }
+
+            // + down * dist
+            Gizmos.color = isGroundedRaw ? Color.yellow : Color.red;
+            Gizmos.DrawWireSphere(GroundCastCenter + down * groundCastDistance, radius);
+            // Debug.DrawRay(pos, down * dist, isGroundedRaw ? Color.yellow : Color.red);
+            // for (float deg = 0; deg < 360; deg += groundDegreeCastStep)
+            // {
+            //     Vector2 degVector2 = UMath.DegreeToVector2(deg);
+            //     Vector3 degreePos = transform.TransformDirection(new Vector3(degVector2.x, 0, degVector2.y)) * push;
+            //     Debug.DrawRay(pos + degreePos, down * dist, isGroundedRaw ? Color.yellow : Color.red);
+            // }
         }
 #endif
 

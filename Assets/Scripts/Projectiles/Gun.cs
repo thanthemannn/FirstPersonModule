@@ -45,7 +45,7 @@ namespace Than.Projectiles
 
 
 
-        public bool IsMovingBeyondRecoilThreshold => physicsBody.LastMoveStep.magnitude > recoil_moveSpeedMultiplierThreshold;
+        public bool IsMovingBeyondRecoilThreshold => physicsBody.MoveStep.magnitude > recoil_moveSpeedMultiplierThreshold;
 
         public Projectile sampleProjectile { get; private set; }
 
@@ -290,7 +290,7 @@ namespace Than.Projectiles
             else
                 current_bloomTime = Mathf.Max(0, current_bloomTime - Time.deltaTime * bloom_returnSpeed_projectileSpread);
 
-            isSprinting = physicsBody.manualMovement_lastFixedUpdate.magnitude >= Mathf.Lerp(movementComponent.moveSpeed, movementComponent.sprintSpeed, .5f);
+            isSprinting = physicsBody.LastControlledMovement.magnitude >= Mathf.Lerp(movementComponent.moveSpeed, movementComponent.sprintSpeed, .5f);
             // for (int i = 0; i < animators_len; i++)
             //     UpdateAnimationParameters(animators[i]);
 

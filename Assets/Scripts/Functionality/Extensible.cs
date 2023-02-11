@@ -826,7 +826,6 @@ public static class Extensible
     public static IEnumerator Animate(this AnimationCurve curve, System.Action<float> stepAction, Func<float> deltaTimeModifier = null)
     {
         bool hasTimeMod = deltaTimeModifier != null;
-        System.Diagnostics.Stopwatch stopWatch = new System.Diagnostics.Stopwatch();
 
         float endTime = curve.LastTime();
         for (float t = 0; t < endTime; t += hasTimeMod ? deltaTimeModifier.Invoke() * Time.deltaTime : Time.deltaTime)

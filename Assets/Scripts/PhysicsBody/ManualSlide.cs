@@ -84,30 +84,35 @@ namespace Than.Physics3D
                 return;
 
             //*Get our last movestep as our launch slide velocity
-            Vector3 v = pb.LastMoveStep;
+            Vector3 v = pb.MoveStep;
 
             //* Add speed of our slidable slope if relevant
             bool onSlideableSlope = SlopeCheck();
             if (onSlideableSlope)
                 v += PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, transform.up, speedOnSlope);
 
-        
+
             //* Manual slides are permitted if we are moving fast enough OR are on a slope with a strong enough angle
             if (onSlideableSlope || v.magnitude >= minVelocityForSlide)
             {
                 velocity = v;
-                StartCoroutine(RunSlide());
             }
         }
 
-        IEnumerator RunSlide()
+        void FixedUpdate()
+        {
+            if (velocity != Vector3.zero)
+            {
+                SlidePhysics(Time.fixedDeltaTime);
+            }
+        }
+
+        void SlidePhysics(float deltaTime)
         {
             //*Runs slide as long as our manual movement isn't a stronger opposite force to our current slide velocity
-            while (Vector3.Dot(pb.manualMovement_lastFixedUpdate, velocity) > -velocity.magnitude)
+            if (Vector3.Dot(pb.LastControlledMovement, velocity) > -velocity.magnitude)
             {
-                yield return null;
-
-                pb.AddForceImpulse(velocity);
+                pb.MoveUnrestricted(velocity * deltaTime);
                 velocity = PhysicsBody.ApplyDrag(velocity, slideDrag);
 
                 //* If we are still on a slope, keep that speed going
@@ -115,11 +120,15 @@ namespace Than.Physics3D
                 if (SlopeCheck())
                 {
                     Vector3 slopeVelocity = PhysicsBody.GetSlopeForceFromNormal(groundCastHitInfo.normal, transform.up, speedOnSlope);
-                    velocity = Vector3.MoveTowards(velocity, slopeVelocity, slopeVelocity.magnitude * 2 * Time.deltaTime);
+                    velocity = Vector3.MoveTowards(velocity, slopeVelocity, slopeVelocity.magnitude * 2 * deltaTime);
                 }
             }
+            else
+            {
+                velocity = Vector3.zero;
+            }
 
-            velocity = Vector3.zero;
+
         }
 
         #endregion

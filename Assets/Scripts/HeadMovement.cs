@@ -31,7 +31,7 @@ namespace Than.Physics3D
         void Update()
         {
             //*Calculate headbob
-            float movementSqrMagnitude = pb.manualMovement_lastFixedUpdate.sqrMagnitude;
+            float movementSqrMagnitude = pb.LastControlledMovement.sqrMagnitude;
             if (movementSqrMagnitude < .1f || !pb.isGrounded)
             {
                 current_headbobTime = 0;
@@ -46,7 +46,7 @@ namespace Than.Physics3D
 
 
             //*Lean calculations
-            Vector3 clampedMovement = Vector3.ClampMagnitude(transform.InverseTransformDirection(pb.LastMoveStep), 10) / 10;
+            Vector3 clampedMovement = Vector3.ClampMagnitude(transform.InverseTransformDirection(pb.MoveStep), 10) / 10;
             Vector3 leanMod = -Vector3.one;
             if (pb.isGrounded) //*don't lean up/down if we're on the ground
                 leanMod.y = 0;

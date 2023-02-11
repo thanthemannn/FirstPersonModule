@@ -30,7 +30,7 @@ namespace Than.Physics3D
         [Tooltip("Animation performed when crouching / un-crouching.")] public AnimationCurve head_crouchCurve = AnimationCurve.Linear(0, 0, .1f, .5f);
 
         [Space(10)]
-        [Tooltip("Change the character controllers height when crouched.")] public float characterControllerCrouchedHeight = 1.1f;
+        [Tooltip("Change the main collider's height when crouched.")] public float mainColliderCrouchedHeight = 1.1f;
         [Tooltip("Capsule colliders that will be resized when crouching.")] public CrouchCollider[] affectedColliders;
 
         #endregion
@@ -39,7 +39,7 @@ namespace Than.Physics3D
 
         float default_headY;
         int len_affectedColliders;
-        CrouchCollider affectedCharacterController;
+        CrouchCollider mainCrouchCollider;
         PhysicsBody pb;
         Collider[] headSpaceObstructions = new Collider[10];
 
@@ -57,7 +57,7 @@ namespace Than.Physics3D
                 return;
 
             crouched = true;
-            affectedCharacterController.SetCrouch(crouched);
+            mainCrouchCollider.SetCrouch(crouched);
             for (int i = 0; i < len_affectedColliders; i++)
                 affectedColliders[i].SetCrouch(crouched);
 
@@ -79,7 +79,7 @@ namespace Than.Physics3D
                 return;
 
             crouched = false;
-            affectedCharacterController.SetCrouch(crouched);
+            mainCrouchCollider.SetCrouch(crouched);
             for (int i = 0; i < len_affectedColliders; i++)
                 affectedColliders[i].SetCrouch(crouched);
 
@@ -102,8 +102,8 @@ namespace Than.Physics3D
 
         void Start()
         {
-            affectedCharacterController = new CrouchCollider(pb.capsuleCollider);
-            affectedCharacterController.crouchedHeight = characterControllerCrouchedHeight;
+            mainCrouchCollider = new CrouchCollider(pb.capsuleCollider);
+            mainCrouchCollider.crouchedHeight = mainColliderCrouchedHeight;
             len_affectedColliders = affectedColliders.Length;
             for (int i = 0; i < len_affectedColliders; i++)
                 affectedColliders[i].Setup();
@@ -140,10 +140,10 @@ namespace Than.Physics3D
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            if (Application.isPlaying && !crouched && affectedCharacterController != null)
+            if (Application.isPlaying && !crouched && mainCrouchCollider != null)
             {
-                affectedCharacterController.crouchedHeight = characterControllerCrouchedHeight;
-                affectedCharacterController.Setup();
+                mainCrouchCollider.crouchedHeight = mainColliderCrouchedHeight;
+                mainCrouchCollider.Setup();
             }
         }
 
@@ -171,9 +171,9 @@ namespace Than.Physics3D
         bool CheckHeadspaceObstructed()
         {
             Vector3 center = pb.capsuleCollider.center;
-            center.y = affectedCharacterController.defaultCenterY;
+            center.y = mainCrouchCollider.defaultCenterY;
             Vector3 pos = transform.position + center;
-            Vector3 offset = Vector3.up * (affectedCharacterController.defaultHeight * .5f - pb.capsuleCollider.radius);
+            Vector3 offset = transform.up * (mainCrouchCollider.defaultHeight * .5f - pb.capsuleCollider.radius);
             int collisionSize = Physics.OverlapSphereNonAlloc(pos + offset, pb.capsuleCollider.radius, headSpaceObstructions, pb.layerMask);
 
             for (int i = 0; i < collisionSize; i++)

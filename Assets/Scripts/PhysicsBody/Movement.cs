@@ -123,9 +123,9 @@ namespace Than.Physics3D
             inputBuffer = Vector2.zero;
         }
 
-        Vector3 targetVelocity;
-        Vector3 smoothVelocity;
-        Vector3 smoothVRef;
+        Vector3 targetVelocity = Vector3.zero;
+        Vector3 smoothVelocity = Vector3.zero;
+        Vector3 smoothVRef = Vector3.zero;
         void Update()
         {
             //* Input
@@ -158,13 +158,20 @@ namespace Than.Physics3D
                 //*Target velocity processing
                 float current_speed = sprinting ? sprintSpeed : moveSpeed;
                 targetVelocity = moveDirection * current_speed;
+
+                // //*Smooth velocity ensures we change our movement... smoothly
+                // smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime);
+
+                // pb.Move(smoothVelocity * Time.deltaTime);
             }
+        }
 
+        void FixedUpdate()
+        {
             //*Smooth velocity ensures we change our movement... smoothly
-            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime);
+            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime, Mathf.Infinity, Time.fixedDeltaTime);
 
-            //*Move in direction * speed (velocity)
-            pb.Move(smoothVelocity);
+            pb.Move(smoothVelocity * Time.fixedDeltaTime);
         }
 
         // void Update()

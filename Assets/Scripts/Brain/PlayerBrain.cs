@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Than.Input
 {
-    [DefaultExecutionOrder(-5)]
+    [DefaultExecutionOrder(-9)]
     [RequireComponent(typeof(Brain))]
     [RequireComponent(typeof(PlayerInput))]
     public class PlayerBrain : MonoBehaviour
