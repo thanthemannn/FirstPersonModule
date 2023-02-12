@@ -113,7 +113,7 @@ namespace Than.Physics3D
             if (Vector3.Dot(pb.LastControlledMovement, velocity) > -velocity.magnitude)
             {
                 pb.MoveUnrestricted(velocity * deltaTime);
-                velocity = PhysicsBody.ApplyDrag(velocity, slideDrag);
+                velocity = PhysicsBody.ApplyDrag(velocity, slideDrag, deltaTime);
 
                 //* If we are still on a slope, keep that speed going
                 //* We use movetowards here as we may have started the slide in a direction opposite to the slope

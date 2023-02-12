@@ -33,6 +33,7 @@ namespace Than.Physics3D
         int current_jumps;
         PhysicsBody pb;
         float lastJumpTime = 0;
+        Vector3 lastJumpForce = Vector3.zero;
         RaycastHit jumpGroundCast;
 
         #endregion
@@ -81,9 +82,9 @@ namespace Than.Physics3D
             brain.Jump.onPress -= JumpPressed;
         }
 
-        void Update()
+        void FixedUpdate()
         {
-            if (pb.isGrounded && Time.time > lastJumpTime + pb.groundCoyoteTime + jumpCooldown) //* Artificial cooldown using coyote time to avoid potential double jumps while the ground is still buffered
+            if (pb.isGrounded && Time.fixedTime > lastJumpTime + pb.groundCoyoteTime + jumpCooldown) //* Artificial cooldown using coyote time to avoid potential double jumps while the ground is still buffered
             {
                 current_jumps = 0;
             }
@@ -105,9 +106,10 @@ namespace Than.Physics3D
             if (pb.GroundCast(out jumpGroundCast) && pb.IsNormalSlidable(jumpGroundCast.normal))
                 forceDir = jumpGroundCast.normal;
 
-            pb.AddForce(forceDir * force);
+            lastJumpForce = forceDir * force;
+            pb.AddForce(lastJumpForce);
 
-            lastJumpTime = Time.time;
+            lastJumpTime = Time.fixedTime;
         }
 
         IEnumerator HoldGravity()

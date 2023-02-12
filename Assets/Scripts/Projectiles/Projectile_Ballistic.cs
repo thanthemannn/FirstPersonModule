@@ -88,7 +88,8 @@ namespace Than.Projectiles
                 dist += v.magnitude;
             }
 
-            m_vel = PhysicsBody.ApplyDrag(velocity, drag);
+            //TODO change this to work with fixedUpdate
+            m_vel = PhysicsBody.ApplyDrag(velocity, drag, Time.deltaTime);
             transform.position = current_castStepPoint;
 
             if (dist > maxShootDistance)
