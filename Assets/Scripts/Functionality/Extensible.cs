@@ -176,6 +176,15 @@ public static class Extensible
         return vector3;
     }
 
+    public static Vector3 RotateAroundPivot(this Vector3 point, Vector3 pivot, Quaternion angle)
+    {
+        Vector3 dir = point - pivot;
+        dir = angle * dir;
+        point = dir + pivot;
+        return point;
+    }
+
+
     /// <summary>
     /// Returns a vector3 with the changed x in the chosen dimension. Keeps the other dimensions the same as source.
     /// </summary>
@@ -192,6 +201,15 @@ public static class Extensible
     public static Vector2 To2D(this Vector3 vector3)
     {
         return new Vector2(vector3.x, vector3.y);
+    }
+
+    #endregion
+
+    #region Quaternion
+
+    public static Quaternion Difference(this Quaternion from, Quaternion to)
+    {
+        return to * Quaternion.Inverse(from);
     }
 
     #endregion

@@ -13,8 +13,36 @@ namespace Than.Physics3D
     [RequireComponent(typeof(CapsuleCollider))]
     public class PhysicsBody : MonoBehaviour
     {
-        public float forwardMove = 1;
+        public Vector3 gravityDirection = Vector3.down;
+        public Vector3 up;
+
         #region Public Properties and Events
+
+        public Transform PlatformParent
+        {
+            get { return _platformParent; }
+
+            set
+            {
+                if (value == _platformParent)
+                    return;
+
+                _platformParent = value;
+
+                if (_platformParent)
+                {
+                    platformParent_velocity = Vector3.zero;
+                    platformParent_rotationDelta = Quaternion.identity;
+                    platformParent_lastPosition = _platformParent.position;
+                    platformParent_lastRotation = _platformParent.rotation;
+                }
+
+            }
+        }
+
+        public Vector3 platformParent_velocity { get; private set; }
+        public Quaternion platformParent_rotationDelta { get; private set; }
+
         public Transform sphereTest;
         public float sphereMultiplier = 1;
         //public CharacterController characterController { get; private set; }
@@ -62,6 +90,9 @@ namespace Than.Physics3D
         [Tooltip("The linear drag coefficient. 0 means no damping.")]
         [Min(0)] public float drag = 1;
 
+        [Tooltip("Should the body rotate along it's relative Y with the platform it stands on")]
+        public bool rotateWithParentPlatform = false;
+
         [Header("Gravity")]
         [Tooltip("The gravity while the body is descending.")]
         public float descent_gravityScale = 4;
@@ -96,7 +127,7 @@ namespace Than.Physics3D
         #region Other Properties and Varibles
 
         //*Ground cast properties
-        Vector3 GroundCastCenter => transform.TransformPoint(capsuleCollider.center - transform.up * (capsuleCollider.height * .5f - GroundCastRadius));// * (capsuleCollider.height * .5f - capsuleCollider.radius); //transform.position + characterController.center;
+        Vector3 GroundCastCenter => transform.TransformPoint(capsuleCollider.center - Vector3.up * (capsuleCollider.height * .5f - GroundCastRadius));// * (capsuleCollider.height * .5f - capsuleCollider.radius); //transform.position + characterController.center;
         //float CastDistance => capsuleCollider.height * .5f + groundCastDistance;//characterController.height * .5f + groundCastDistance;
         float GroundCastRadius => capsuleCollider.radius * .666666f;//transform.forward * characterController.radius * .5f;
 
@@ -108,7 +139,18 @@ namespace Than.Physics3D
         //*Velocity Limiting
         RaycastHit velocityCast_allocation;
 
+
+        //*Platform parenting
+        Transform _platformParent;
+        Vector3 platformParent_lastPosition;
+        Quaternion platformParent_lastRotation;
+
+
+
         #endregion
+
+
+
 
 
         #region Control Methods
@@ -334,6 +376,8 @@ namespace Than.Physics3D
 
         public float collisionDetectionEpsilon = .1f;
 
+
+
         void FixedUpdate()
         {
             bool groundCast = GroundCast(out cached_groundCastHitInfo);
@@ -344,6 +388,8 @@ namespace Than.Physics3D
             {
                 rb.AddForce(-cached_groundCastHitInfo.normal * stickToGroundForce, ForceMode.VelocityChange);//-transform.up * stickToGroundForce, ForceMode.VelocityChange);
             }
+
+            UpdatePlatformParent(groundCast);
 
             //*Gravity
             Vector3 acceleration = GravityDirection * -Physics.gravity.y * current_gravityScale;
@@ -379,6 +425,8 @@ namespace Than.Physics3D
 
             controlledMovement = Vector3.zero;
             unrestrictedMovement = Vector3.zero;
+
+            up = transform.up;
         }
 
 
@@ -398,7 +446,7 @@ namespace Than.Physics3D
                 }
                 else
                 {
-                    return Vector3.down;
+                    return gravityDirection;
                 }
 
             }
@@ -439,6 +487,35 @@ namespace Than.Physics3D
 
         //     return gravity;
         // }
+
+        void UpdatePlatformParent(bool groundCastHit)
+        {
+            if (groundCastHit)
+            {
+                PlatformParent = cached_groundCastHitInfo.transform;
+
+                platformParent_velocity = PlatformParent.position - platformParent_lastPosition;
+                platformParent_rotationDelta = platformParent_lastRotation.Difference(PlatformParent.rotation);
+
+                if (platformParent_rotationDelta != Quaternion.identity)
+                {
+                    rb.position = rb.position.RotateAroundPivot(platformParent_lastPosition, platformParent_rotationDelta);
+
+                    transform.localEulerAngles += new Vector3(0, platformParent_rotationDelta.eulerAngles.y, 0);
+                }
+
+                platformParent_lastPosition = PlatformParent.position;
+                platformParent_lastRotation = PlatformParent.rotation;
+            }
+            else
+            {
+                PlatformParent = null;
+                platformParent_rotationDelta = Quaternion.identity;
+            }
+
+            rb.position += platformParent_velocity;
+        }
+
 
         Vector3 UpdateSlideVelocity(bool groundCastHit, float deltaTime)
         {

@@ -44,15 +44,15 @@ namespace Than.Physics3D
 
         void OnEnable()
         {
-            brain.Crouch.onHeldChange += Slide;
+            brain.Crouch.onHeldChange += SlidePressedAction;
             pb.onGroundStatusChange += GroundStatusChanged;
         }
 
         void OnDisable()
         {
-            brain.Crouch.onHeldChange -= Slide;
+            brain.Crouch.onHeldChange -= SlidePressedAction;
             pb.onGroundStatusChange -= GroundStatusChanged;
-            Slide(false);
+            ResetSlide();
         }
 
         #endregion
@@ -63,7 +63,16 @@ namespace Than.Physics3D
         void GroundStatusChanged(bool ground)
         {
             if (ground && brain.Crouch)
-                Slide(true);
+            {
+                Vector3 v = pb.LastControlledMovement;
+                // if (v.sqrMagnitude < float.Epsilon)
+                //     v = transform.forward;
+
+                v = pb.LastControlledMovement.normalized * pb.velocity.magnitude;
+
+
+                Slide(v, float.Epsilon);
+            }
         }
 
         bool SlopeCheck() => (pb.GroundCast(out groundCastHitInfo) && PhysicsBody.IsNormalSlidable(groundCastHitInfo.normal, transform.up, minSlopeAngle));
@@ -72,19 +81,24 @@ namespace Than.Physics3D
 
         #region Physics
 
-        void Slide(bool activate)
+        void SlidePressedAction(bool activate)
         {
             if (!pb.isGrounded)
                 return;
 
-            //*Some reset activities
-            velocity = Vector3.zero;
-            StopAllCoroutines();
+            ResetSlide();
+
             if (!activate)
                 return;
 
             //*Get our last movestep as our launch slide velocity
             Vector3 v = pb.MoveStep;
+            Slide(v, minVelocityForSlide);
+        }
+
+        void Slide(Vector3 startingVelocity, float minVelocityRequired)
+        {
+            Vector3 v = startingVelocity;
 
             //* Add speed of our slidable slope if relevant
             bool onSlideableSlope = SlopeCheck();
@@ -93,10 +107,17 @@ namespace Than.Physics3D
 
 
             //* Manual slides are permitted if we are moving fast enough OR are on a slope with a strong enough angle
-            if (onSlideableSlope || v.magnitude >= minVelocityForSlide)
+            if (onSlideableSlope || v.magnitude > minVelocityRequired)
             {
                 velocity = v;
             }
+        }
+
+        void ResetSlide()
+        {
+            //*Some reset activities
+            velocity = Vector3.zero;
+            StopAllCoroutines();
         }
 
         void FixedUpdate()

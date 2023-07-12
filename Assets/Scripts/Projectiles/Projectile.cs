@@ -276,7 +276,7 @@ namespace Than.Projectiles
 
 
             ParticleSystem.EmitParams emitParams = new ParticleSystem.EmitParams();
-            emitParams.position = hitData.raycast.point;
+            emitParams.position = hitData.projectileHitPoint;
 
             var burstData = hitParticle.emission.GetBurst(0);
 
