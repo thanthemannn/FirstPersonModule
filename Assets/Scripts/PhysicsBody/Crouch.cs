@@ -4,8 +4,7 @@ using Than.Input;
 namespace Than.Physics3D
 {
     [DefaultExecutionOrder(0)]
-    [RequireComponent(typeof(PhysicsBody))]
-    public class Crouch : MonoBehaviour
+    public class Crouch : PhysicsBodyModule
     {
         #region Public Properties and Events
 
@@ -40,7 +39,6 @@ namespace Than.Physics3D
         float default_headY;
         int len_affectedColliders;
         CrouchCollider mainCrouchCollider;
-        PhysicsBody pb;
         Collider[] headSpaceObstructions = new Collider[10];
 
         #endregion
@@ -53,7 +51,7 @@ namespace Than.Physics3D
             if (crouched)
                 return;
 
-            if (!allowCrouchInAir && !pb.isGrounded)
+            if (!allowCrouchInAir && !physicsBody.isGrounded)
                 return;
 
             crouched = true;
@@ -95,14 +93,9 @@ namespace Than.Physics3D
 
         #region Unity Methods
 
-        void Awake()
-        {
-            pb = GetComponent<PhysicsBody>();
-        }
-
         void Start()
         {
-            mainCrouchCollider = new CrouchCollider(pb.capsuleCollider);
+            mainCrouchCollider = new CrouchCollider(physicsBody.capsuleCollider);
             mainCrouchCollider.crouchedHeight = mainColliderCrouchedHeight;
             len_affectedColliders = affectedColliders.Length;
             for (int i = 0; i < len_affectedColliders; i++)
@@ -114,13 +107,13 @@ namespace Than.Physics3D
         void OnEnable()
         {
             brain.Crouch.onPress += StartCrouch;
-            pb.onGroundStatusChange += GroundStatusChanged;
+            physicsBody.onGroundStatusChange += GroundStatusChanged;
         }
 
         void OnDisable()
         {
             brain.Crouch.onPress -= StartCrouch;
-            pb.onGroundStatusChange -= GroundStatusChanged;
+            physicsBody.onGroundStatusChange -= GroundStatusChanged;
             StopAllCoroutines();
             StopCrouch(false);
         }
@@ -129,8 +122,8 @@ namespace Than.Physics3D
         {
             if (crouched)
             {
-                pb.ApplyMoveSpeedLimit_Ground(grounded_speedLimit);
-                pb.ApplyMoveSpeedLimit_Air(aerial_speedLimit);
+                physicsBody.ApplyMoveSpeedLimit_Ground(grounded_speedLimit);
+                physicsBody.ApplyMoveSpeedLimit_Air(aerial_speedLimit);
 
                 if (!brain.Crouch)
                     StopCrouch();
@@ -170,11 +163,11 @@ namespace Than.Physics3D
 
         bool CheckHeadspaceObstructed()
         {
-            Vector3 center = pb.capsuleCollider.center;
+            Vector3 center = physicsBody.capsuleCollider.center;
             center.y = mainCrouchCollider.defaultCenterY;
             Vector3 pos = transform.position + center;
-            Vector3 offset = transform.up * (mainCrouchCollider.defaultHeight * .5f - pb.capsuleCollider.radius);
-            int collisionSize = Physics.OverlapSphereNonAlloc(pos + offset, pb.capsuleCollider.radius, headSpaceObstructions, pb.layerMask);
+            Vector3 offset = transform.up * (mainCrouchCollider.defaultHeight * .5f - physicsBody.capsuleCollider.radius);
+            int collisionSize = Physics.OverlapSphereNonAlloc(pos + offset, physicsBody.capsuleCollider.radius, headSpaceObstructions, physicsBody.layerMask);
 
             for (int i = 0; i < collisionSize; i++)
             {

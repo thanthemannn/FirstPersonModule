@@ -9,14 +9,12 @@ using Than.Input;
 namespace Than.Physics3D
 {
     [DefaultExecutionOrder(2)]
-    [RequireComponent(typeof(PhysicsBody))]
-    public class Movement : MonoBehaviour
+    public class Movement : PhysicsBodyModule
     {
         public float vSmoothTime = 0.1f;
         public float airSmoothTime = 0.5f;
 
         #region  Public Properties and Events
-        public PhysicsBody pb { get; private set; }
 
         public bool sprinting { get; private set; } = false;
         public System.Action<bool> onSprintStateChanged;
@@ -112,11 +110,6 @@ namespace Than.Physics3D
 
         #region Unity Methods
 
-        void Awake()
-        {
-            pb = GetComponent<PhysicsBody>();
-        }
-
         void OnEnable()
         {
             speedTimeBuffer = 0;
@@ -142,7 +135,7 @@ namespace Than.Physics3D
             {
                 //*Adjust our movement to compensate for any slopes we may be on
                 Vector3 normal = transform.up;
-                if (pb.GroundCast(out groundHitInfo))
+                if (physicsBody.GroundCast(out groundHitInfo))
                     normal = groundHitInfo.normal;
 
                 //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
@@ -160,18 +153,18 @@ namespace Than.Physics3D
                 targetVelocity = moveDirection * current_speed;
 
                 // //*Smooth velocity ensures we change our movement... smoothly
-                // smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime);
+                // smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, physicsBody.isGrounded ? vSmoothTime : airSmoothTime);
 
-                // pb.Move(smoothVelocity * Time.deltaTime);
+                // physicsBody.Move(smoothVelocity * Time.deltaTime);
             }
         }
 
         void FixedUpdate()
         {
             //*Smooth velocity ensures we change our movement... smoothly
-            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, pb.isGrounded ? vSmoothTime : airSmoothTime, Mathf.Infinity, Time.fixedDeltaTime);
+            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, physicsBody.isGrounded ? vSmoothTime : airSmoothTime, Mathf.Infinity, Time.fixedDeltaTime);
 
-            pb.Move(smoothVelocity * Time.fixedDeltaTime);
+            physicsBody.Move(smoothVelocity * Time.fixedDeltaTime);
         }
 
         // void Update()
@@ -179,9 +172,9 @@ namespace Than.Physics3D
         //     //* Input acceleration / deceleration when we are in air / on ground
         //     float rate;
         //     if (brain.Move.held)
-        //         rate = pb.isGrounded ? move_accelerationRate : air_accelerationRate;
+        //         rate = physicsBody.isGrounded ? move_accelerationRate : air_accelerationRate;
         //     else
-        //         rate = pb.isGrounded ? move_deccelerationRate : air_deccelerationRate;
+        //         rate = physicsBody.isGrounded ? move_deccelerationRate : air_deccelerationRate;
 
         //     inputBuffer = Vector2.MoveTowards(inputBuffer, brain.Move, Time.deltaTime * rate);
 
@@ -198,7 +191,7 @@ namespace Than.Physics3D
 
         //     //*Adjust our movement to compensate for any slopes we may be on
         //     Vector3 normal = transform.up;
-        //     // if (pb.GroundCast(out groundHitInfo))
+        //     // if (physicsBody.GroundCast(out groundHitInfo))
         //     //     normal = groundHitInfo.normal;
 
         //     //*Translate our 2D input to a 3D direction based off of our body relative to our projectionRelativeTransform (which is usually the camera)
@@ -212,7 +205,7 @@ namespace Than.Physics3D
         //         moveDirection = moveDirection.normalized;
 
         //     //*Move in direction * speed (velocity)
-        //     pb.Move(moveDirection * current_speed);
+        //     physicsBody.Move(moveDirection * current_speed);
         // }
 
         #endregion
@@ -226,13 +219,13 @@ namespace Than.Physics3D
 
             if (inputBuffer == Vector2.zero) //* No movement = no sprint
                 sprinting = false;
-            else if (!buffer_sprint && !canStartSprintInAir && !pb.isGrounded) //* Started sprinting in the air, and whether that's allowed or not
+            else if (!buffer_sprint && !canStartSprintInAir && !physicsBody.isGrounded) //* Started sprinting in the air, and whether that's allowed or not
                 sprinting = false;
             else if (current_sprintTime >= max_staminaTime) //* Our sprint is maxed out
                 sprinting = false;
             else if (Mathf.Abs(Vector2.SignedAngle(Vector2.up, inputBuffer)) > allowedSprintArc) //* Don't allow us to sprint outside of the allowed facing direction arc
                 sprinting = false;
-            else if (pb.isGrounded ? (pb.Current_GroundSpeedLimit < sprintSpeed) : (pb.Current_AirSpeedLimit < sprintSpeed)) //* If our speed limit in the physicsbody is lower than our actual speed, we shouldn't sprint
+            else if (physicsBody.isGrounded ? (physicsBody.Current_GroundSpeedLimit < sprintSpeed) : (physicsBody.Current_AirSpeedLimit < sprintSpeed)) //* If our speed limit in the physicsbody is lower than our actual speed, we shouldn't sprint
                 sprinting = false;
             else if (inputBuffer.magnitude < minSprintInputMagnitude) //* If our input is too weak, player probably shouldn't sprint
                 sprinting = false;

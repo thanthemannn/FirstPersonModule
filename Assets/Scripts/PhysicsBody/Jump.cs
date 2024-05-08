@@ -4,8 +4,7 @@ using Than.Input;
 
 namespace Than.Physics3D
 {
-    [RequireComponent(typeof(PhysicsBody))]
-    public class Jump : MonoBehaviour
+    public class Jump : PhysicsBodyModule
     {
         #region Inspector Fields
 
@@ -31,7 +30,6 @@ namespace Than.Physics3D
         #region Other Properties and Variables
 
         int current_jumps;
-        PhysicsBody pb;
         float lastJumpTime = 0;
         Vector3 lastJumpForce = Vector3.zero;
         RaycastHit jumpGroundCast;
@@ -58,7 +56,12 @@ namespace Than.Physics3D
         public void ReplenishJumps()
         {
             //*Give the very first jump back only if we are on the ground
-            current_jumps = pb.isGrounded ? 0 : 1;
+            ReplenishJumps(physicsBody.isGrounded);
+        }
+
+        public void ReplenishJumps(bool replenishFirstJump = true)
+        {
+            current_jumps = replenishFirstJump ? 0 : 1;
         }
 
         #endregion
@@ -67,7 +70,6 @@ namespace Than.Physics3D
 
         void Awake()
         {
-            pb = GetComponent<PhysicsBody>();
             current_jumps = jumps.Length;
         }
 
@@ -84,7 +86,7 @@ namespace Than.Physics3D
 
         void FixedUpdate()
         {
-            if (pb.isGrounded && Time.fixedTime > lastJumpTime + pb.groundCoyoteTime + jumpCooldown) //* Artificial cooldown using coyote time to avoid potential double jumps while the ground is still buffered
+            if (physicsBody.isGrounded && Time.fixedTime > lastJumpTime + physicsBody.groundCoyoteTime + jumpCooldown) //* Artificial cooldown using coyote time to avoid potential double jumps while the ground is still buffered
             {
                 current_jumps = 0;
             }
@@ -96,18 +98,18 @@ namespace Than.Physics3D
 
         void PerformJump(float force)
         {
-            Vector3 relVel = pb.RelativeVelocity;
+            Vector3 relVel = physicsBody.RelativeVelocity;
             if (relVel.y < 0)
-                pb.RelativeVelocity = new Vector3(relVel.x, 0, relVel.z);
+                physicsBody.RelativeVelocity = new Vector3(relVel.x, 0, relVel.z);
 
             Vector3 forceDir = transform.up;
 
             //* If we are on the ground and sliding, make our jump direction the normal of the surface we are sliding on
-            if (pb.GroundCast(out jumpGroundCast) && pb.IsNormalSlidable(jumpGroundCast.normal))
+            if (physicsBody.GroundCast(out jumpGroundCast) && physicsBody.IsNormalSlidable(jumpGroundCast.normal))
                 forceDir = jumpGroundCast.normal;
 
             lastJumpForce = forceDir * force;
-            pb.AddForce(lastJumpForce);
+            physicsBody.AddForce(lastJumpForce);
 
             lastJumpTime = Time.fixedTime;
         }
@@ -116,7 +118,7 @@ namespace Than.Physics3D
         {
             while (brain.Jump)
             {
-                pb.SetGravityThisFrame(descent_jumpHeld_gravityScale, ascent_jumpHeld_gravityScale);
+                physicsBody.SetGravityThisFrame(descent_jumpHeld_gravityScale, ascent_jumpHeld_gravityScale);
                 yield return null;
             }
         }

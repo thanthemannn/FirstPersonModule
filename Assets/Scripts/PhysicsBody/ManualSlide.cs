@@ -6,8 +6,7 @@ namespace Than.Physics3D
 {
     //*Should execute after manual move input scripts
     [DefaultExecutionOrder(4)]
-    [RequireComponent(typeof(PhysicsBody))]
-    public class ManualSlide : MonoBehaviour
+    public class ManualSlide : PhysicsBodyModule
     {
         #region Inspector Fields
 
@@ -29,29 +28,22 @@ namespace Than.Physics3D
 
         #region Other Variables and Properties
 
-        PhysicsBody pb;
         Vector3 velocity;
         RaycastHit groundCastHitInfo;
 
         #endregion
 
         #region Unity Methods
-
-        void Awake()
-        {
-            pb = GetComponent<PhysicsBody>();
-        }
-
         void OnEnable()
         {
             brain.Crouch.onHeldChange += SlidePressedAction;
-            pb.onGroundStatusChange += GroundStatusChanged;
+            physicsBody.onGroundStatusChange += GroundStatusChanged;
         }
 
         void OnDisable()
         {
             brain.Crouch.onHeldChange -= SlidePressedAction;
-            pb.onGroundStatusChange -= GroundStatusChanged;
+            physicsBody.onGroundStatusChange -= GroundStatusChanged;
             ResetSlide();
         }
 
@@ -64,18 +56,18 @@ namespace Than.Physics3D
         {
             if (ground && brain.Crouch)
             {
-                Vector3 v = pb.LastControlledMovement;
+                Vector3 v = physicsBody.LastControlledMovement;
                 // if (v.sqrMagnitude < float.Epsilon)
                 //     v = transform.forward;
 
-                v = pb.LastControlledMovement.normalized * pb.velocity.magnitude;
+                v = physicsBody.LastControlledMovement.normalized * physicsBody.velocity.magnitude;
 
 
                 Slide(v, float.Epsilon);
             }
         }
 
-        bool SlopeCheck() => (pb.GroundCast(out groundCastHitInfo) && PhysicsBody.IsNormalSlidable(groundCastHitInfo.normal, transform.up, minSlopeAngle));
+        bool SlopeCheck() => (physicsBody.GroundCast(out groundCastHitInfo) && PhysicsBody.IsNormalSlidable(groundCastHitInfo.normal, transform.up, minSlopeAngle));
 
         #endregion
 
@@ -83,7 +75,7 @@ namespace Than.Physics3D
 
         void SlidePressedAction(bool activate)
         {
-            if (!pb.isGrounded)
+            if (!physicsBody.isGrounded)
                 return;
 
             ResetSlide();
@@ -92,7 +84,7 @@ namespace Than.Physics3D
                 return;
 
             //*Get our last movestep as our launch slide velocity
-            Vector3 v = pb.MoveStep;
+            Vector3 v = physicsBody.MoveStep;
             Slide(v, minVelocityForSlide);
         }
 
@@ -131,9 +123,9 @@ namespace Than.Physics3D
         void SlidePhysics(float deltaTime)
         {
             //*Runs slide as long as our manual movement isn't a stronger opposite force to our current slide velocity
-            if (Vector3.Dot(pb.LastControlledMovement, velocity) > -velocity.magnitude)
+            if (Vector3.Dot(physicsBody.LastControlledMovement, velocity) > -velocity.magnitude)
             {
-                pb.MoveUnrestricted(velocity * deltaTime);
+                physicsBody.MoveUnrestricted(velocity * deltaTime);
                 velocity = PhysicsBody.ApplyDrag(velocity, slideDrag, deltaTime);
 
                 //* If we are still on a slope, keep that speed going

@@ -5,9 +5,9 @@ using Than.Input;
 
 namespace Than.Physics3D
 {
-    public class EdgeGrab : MonoBehaviour
+    public class EdgeGrab : PhysicsBodyModule
     {
-        PhysicsBody pb;
+
 
         [Header("General")]
         public Brain brain;
@@ -18,22 +18,31 @@ namespace Than.Physics3D
         [Tooltip("How far above our head should we begin the edge check.")] public float edgeCheckYOffset = .25f;
 
         [Tooltip("How long is the edge check line that begins near the objects's head and moves relative downward.")] public float edgeCheckHeight = 1f;
-
         public float edgeGrabSnapOffset = 0.1f;
 
-        void Awake()
-        {
-            pb = GetComponent<PhysicsBody>();
-        }
+        [Tooltip("Make sure we don't grab anything too slanted sideways.")]
+        [Range(0, 180)] public float edgeGrabAllowedNormalDegreeVariance_roll = 45;
+
+        [Tooltip("Make sure we don't grab anything too slippery (bent towards us).")]
+        [Range(0, 180)] public float edgeGrabAllowedNormalDegreeVariance_pitch = 20;
+
+        [Tooltip("The force applied to push against the edge we are climbing.")]
+        public float edgeGrabClingForce = 1.5f;
+
+        public float edgeGrabBoostForce => physicsBody.ascent_gravityScale * 2;
 
         bool ClamberInputHeld => brain.Jump.held && !brain.Crouch.held;
 
+        public bool active { get; private set; }
+
+
         // Update is called once per frame
-        void Update()
+        void FixedUpdate()
         {
-            if (ClamberInputHeld && !pb.isGrounded && EdgeCheck())
+            active = ClamberInputHeld && !physicsBody.isGrounded && EdgeCheck();
+            if (active)
             {
-                ActivateClamber();
+                EdgeGrabBoost();
             }
         }
 
@@ -43,39 +52,38 @@ namespace Than.Physics3D
             Vector3 relUp = transform.up;
             Vector3 relFwd = transform.forward;
 
-            float dist = pb.capsuleCollider.radius + edgeCheckDistance;
+            float dist = physicsBody.capsuleCollider.radius + edgeCheckDistance;
 
             Vector3 downStart = head.transform.position + (relUp * edgeCheckYOffset) + (relFwd * dist);
             Vector3 downEnd = downStart - (relUp * edgeCheckHeight);
 
-            RaycastHit downHit;
-            bool hitDown = Physics.Linecast(downStart, downEnd, out downHit, pb.layerMask);
+            bool hitDown = Physics.Linecast(downStart, downEnd, out RaycastHit downHit, physicsBody.layerMask);
             Debug.DrawLine(downStart, downEnd, Color.grey);
 
             if (hitDown)
             {
-                Vector3 fwdEnd = downHit.point - (relUp * edgeGrabSnapOffset);
-                Vector3 fwdStart = fwdEnd - (relFwd * dist);
+                float rollAngleDiff = Mathf.Abs(Vector3.SignedAngle(downHit.normal, transform.right, transform.forward) + 90);
+                bool withinRollVariance = rollAngleDiff <= edgeGrabAllowedNormalDegreeVariance_roll;
 
-                Debug.DrawLine(downStart, downHit.point, Color.green);
-                Debug.DrawLine(fwdStart, fwdEnd, Color.green);
+                float pitchAngleDiff = Mathf.Abs(Vector3.SignedAngle(transform.forward, downHit.normal, transform.up)) - 90;
+                bool withinPitchVariance = pitchAngleDiff <= edgeGrabAllowedNormalDegreeVariance_pitch;
 
-                //TODO finish casting and add edge scan / grab
+                return withinRollVariance && withinPitchVariance;
             }
 
             return false;
         }
 
-        void ActivateClamber()
+        void EdgeGrabBoost()
         {
+            Vector3 force = transform.up * edgeGrabBoostForce;
 
+            if (physicsBody.MoveStep == Vector3.zero)
+                force += transform.forward * edgeGrabClingForce;
+
+            physicsBody.velocity = force;
+
+            Debug.DrawRay(physicsBody.rb.position, force, Color.cyan);
         }
-
-        // void OnDrawGizmosSelected()
-        // {
-        //     Gizmos.color = Color.blue;
-
-        //     Gizmos.Draw
-        // }
     }
 }

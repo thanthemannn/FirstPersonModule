@@ -145,7 +145,10 @@ namespace Than.Physics3D
         Vector3 platformParent_lastPosition;
         Quaternion platformParent_lastRotation;
 
-
+        //* Physics freeze overrides
+        // List<MonoBehaviour> movementFreezeOverride;
+        // List<MonoBehaviour> gravityFreezeOverride;
+        // List<MonoBehaviour> velocityFreezeOverride;
 
         #endregion
 
@@ -490,19 +493,23 @@ namespace Than.Physics3D
 
         void UpdatePlatformParent(bool groundCastHit)
         {
-            if (groundCastHit)
+            if (groundCastHit && !cached_groundCastHitInfo.rigidbody)
             {
                 PlatformParent = cached_groundCastHitInfo.transform;
 
                 platformParent_velocity = PlatformParent.position - platformParent_lastPosition;
+
                 platformParent_rotationDelta = platformParent_lastRotation.Difference(PlatformParent.rotation);
 
                 if (platformParent_rotationDelta != Quaternion.identity)
                 {
                     rb.position = rb.position.RotateAroundPivot(platformParent_lastPosition, platformParent_rotationDelta);
 
-                    transform.localEulerAngles += new Vector3(0, platformParent_rotationDelta.eulerAngles.y, 0);
+                    //*Rotate our camera only on our local up axis
+                    platformParent_rotationDelta.ToAngleAxis(out float angle, out Vector3 axis);
+                    transform.Rotate(transform.up, angle * Vector3.Dot(axis, transform.up), Space.World);
                 }
+
 
                 platformParent_lastPosition = PlatformParent.position;
                 platformParent_lastRotation = PlatformParent.rotation;

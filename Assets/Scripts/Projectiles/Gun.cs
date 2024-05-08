@@ -41,7 +41,7 @@ namespace Than.Projectiles
 
         public bool isAiming { get; private set; } = false;
         public Movement movementComponent { get; private set; }
-        public PhysicsBody physicsBody => movementComponent.pb;
+        public PhysicsBody physicsBody => movementComponent.physicsBody;
 
 
 
